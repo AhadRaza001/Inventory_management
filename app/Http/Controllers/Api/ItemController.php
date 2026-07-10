@@ -9,19 +9,105 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
+use App\Services\NumberGenerator;
 use Exception;
 use Illuminate\Support\Facades\Validator;
 
 class ItemController extends ResponseController
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $items = Item::with('category', 'unit')->paginate(10);
+            $query = Item::with(['category', 'unit']);
 
-            return $this->sendPaginatedResponse($items, 'Items fetched successfully.');
+            // Global Search
+            if ($request->input('search')) {
+
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%");
+                });
+            }
+
+            // Sorting
+            $query->orderBy(
+                $request->input('sortField', 'id'),
+                $request->input('sortOrder', 'desc')
+            );
+
+            // Column Filters
+            $filters = json_decode($request->filters, true);
+
+            if ($filters) {
+                foreach ($filters as $filter) {
+
+                    // Skip global filter entries — handled separately via $request->input('search')
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+                    }
+                }
+            }
+
+            // Pagination
+            $items = $query->paginate(
+                $request->input('per_page', 10)
+            );
+
+            return $this->sendPaginatedResponse(
+                $items,
+                'Items fetched successfully.'
+            );
         } catch (Exception $e) {
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 
@@ -60,7 +146,10 @@ class ItemController extends ResponseController
         }
 
         try {
-            $item = Item::create($validated->validated());
+            $data = $validated->validated();
+            // $data['sku']  = 'I-' . str_pad($request->sku, 6, '0', STR_PAD_LEFT);
+    
+            $item = Item::create($data);
 
             return $this->sendResponse($item, 'Item created successfully.');
         } catch (Exception $e) {
@@ -80,6 +169,7 @@ class ItemController extends ResponseController
                 'status'         => 'required',
                 'barcode'        => 'required',
                 'unit_id'        => 'required|exists:units,id',
+                'category_id'        => 'required|exists:categories,id',
             ]
         );
 
@@ -89,7 +179,9 @@ class ItemController extends ResponseController
 
         try {
             $item = Item::findOrFail($id);
-            $item->update($validated->validated());
+            $data = $validated->validated();
+            $data['sku']  =  str_pad($request->sku, 6, '0', STR_PAD_LEFT);
+            $item->update($data);
 
             return $this->sendResponse($item, 'Item updated successfully.');
         } catch (ModelNotFoundException $e) {

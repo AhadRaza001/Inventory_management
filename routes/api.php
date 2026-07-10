@@ -5,9 +5,9 @@ use App\Http\Controllers\api\UnitController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\api\CustomerController;
+use App\Http\Controllers\api\GenerateNumberController;
 use App\Http\Controllers\api\ItemController;
 use App\Http\Controllers\api\ItemLedgerController;
-use App\Http\Controllers\API\ItemLedgerController as APIItemLedgerController;
 use App\Http\Controllers\api\PackingslipController;
 use App\Http\Controllers\api\SaleOrderController;
 use App\Http\Controllers\api\SoDetailController;
@@ -28,6 +28,7 @@ Route::post('logout', [UserController::class, 'logout'])->middleware('auth:sanct
 Route::prefix('categories')->name('categories.')->group(function () {
 
     Route::get('/', [CategoryController::class, 'index'])->name('index');
+    Route::get('/all', [CategoryController::class, 'all']);
 
     Route::get('/{id}', [CategoryController::class, 'single_category'])->name('show');
 
@@ -203,4 +204,11 @@ Route::middleware('auth:sanctum')->prefix('itemledgers')->group(function () {
     Route::post('/by-item',    [ItemLedgerController::class, 'getByItemAndStore']);
     Route::get('/{id}',          [ItemLedgerController::class, 'show']);
     Route::post('/summary', [ItemLedgerController::class, 'inOutSummary']);
+});
+
+// numberGenerate
+Route::middleware('auth:sanctum')->prefix('generate')->group(function () {
+    Route::get('/sale-order', [GenerateNumberController::class, 'saleOrder']);
+    Route::get('/purchase-order', [GenerateNumberController::class, 'purchaseOrder']);
+    Route::get('/item', [GenerateNumberController::class, 'item']);
 });

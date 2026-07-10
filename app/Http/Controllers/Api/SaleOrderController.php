@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Models\Sale_order;
 use App\Models\So_detail;
+use App\Services\NumberGenerator;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -14,30 +15,132 @@ class SaleOrderController extends ResponseController
     public function index(Request $request)
     {
         try {
-            $query = Sale_order::with('customer', 'store', 'user');
 
-            // Optional filters
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
+            $query = Sale_order::with(['customer', 'store', 'user']);
+
+            // Global Search
+            if ($request->input('search')) {
+
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+
+                    $q->where('so_no', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('amount_status', 'like', "%{$search}%")
+                        ->orWhere('customer_requisitions', 'like', "%{$search}%")
+                        ->orWhere('customer_reference', 'like', "%{$search}%")
+                        ->orWhereHas('customer', function ($customer) use ($search) {
+                            $customer->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('store', function ($store) use ($search) {
+                            $store->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('user', function ($user) use ($search) {
+                            $user->where('name', 'like', "%{$search}%");
+                        });
+                });
             }
 
-            if ($request->filled('amount_status')) {
-                $query->where('amount_status', $request->amount_status);
+            // Sorting
+            $query->orderBy(
+                $request->input('sortField', 'id'),
+                $request->input('sortOrder', 'desc')
+            );
+
+            // Column Filters
+            $filters = json_decode($request->filters, true);
+
+            if ($filters) {
+
+                foreach ($filters as $filter) {
+
+                    // Skip global filter
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+                    if ($filter['field'] === 'customer.name') {
+                        $query->whereHas('customer', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    if ($filter['field'] === 'store.name') {
+                        $query->whereHas('store', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    if ($filter['field'] === 'user.name') {
+                        $query->whereHas('user', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+                    }
+                }
             }
 
-            if ($request->filled('store_id')) {
-                $query->where('store_id', $request->store_id);
-            }
+            // Pagination
+            $saleOrders = $query->paginate(
+                $request->input('per_page', 10)
+            );
 
-            if ($request->filled('customer_id')) {
-                $query->where('customer_id', $request->customer_id);
-            }
-
-            $saleOrders = $query->latest()->paginate(10);
-
-            return $this->sendPaginatedResponse($saleOrders, 'Sale orders fetched successfully.');
+            return $this->sendPaginatedResponse(
+                $saleOrders,
+                'Sale orders fetched successfully.'
+            );
         } catch (Exception $e) {
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 
@@ -73,12 +176,13 @@ class SaleOrderController extends ResponseController
         }
 
         try {
+
             $data = $validated->validated();
             
-            $lastOrder      = Sale_order::latest('id')->first();
-            $nextId         = $lastOrder ? $lastOrder->id + 1 : 1;
-            $data['so_no']  = 'SO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-            
+            // $lastOrder      = Sale_order::latest('id')->first();
+            // $nextId         = $lastOrder ? $lastOrder->id + 1 : 1;
+            // $data['so_no']  = 'SO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+
             // TODO: Calculate these from line items when sale_order_items is implemented
             $data['sub_total']       = 0;
             $data['discount_amount'] = 0;
@@ -137,18 +241,18 @@ class SaleOrderController extends ResponseController
     {
         try {
             $saleOrder = Sale_order::findOrFail($id);
-            
+
             if (!in_array($saleOrder->status, ['open', 'cancelled'])) {
                 return $this->sendError(
                     'Cannot delete sale order.',
                     'Only orders with status "open" or "cancelled" can be deleted.',
                     422
-                    );
-                    }
-                    
-                    $deleted_sale_order = $saleOrder;
-                    $saleOrder->delete();
-                    So_detail::where('sale_order_id',$id)->delete();
+                );
+            }
+
+            $deleted_sale_order = $saleOrder;
+            $saleOrder->delete();
+            So_detail::where('sale_order_id', $id)->delete();
 
             return $this->sendResponse($deleted_sale_order, 'Sale order deleted successfully.');
         } catch (ModelNotFoundException $e) {

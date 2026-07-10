@@ -10,14 +10,104 @@ use Illuminate\Support\Facades\Validator;
 
 class UnitController extends ResponseController
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $units = Unit::paginate(10);
+            $query = Unit::query();
 
-            return $this->sendPaginatedResponse($units, 'Units fetched successfully.');
+            // Global Search
+            if ($request->input('search')) {
+
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('symbol', 'like', "%{$search}%");
+                });
+            }
+
+
+
+            // Sorting
+            $query->orderBy(
+                $request->input('sortField', 'id'),
+                $request->input('sortOrder', 'desc')
+            );
+
+            // Column Filters
+            $filters = json_decode($request->filters, true);
+
+
+
+            if ($filters) {
+                foreach ($filters as $filter) {
+
+                    // Skip global filter entries — handled separately via $request->input('search')
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+                    }
+                }
+            }
+
+            // Pagination
+            $units = $query->paginate(
+                $request->input('per_page', 10)
+            );
+
+            return $this->sendPaginatedResponse(
+                $units,
+                'Units fetched successfully.'
+            );
         } catch (Exception $e) {
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 
@@ -49,6 +139,7 @@ class UnitController extends ResponseController
         }
 
         try {
+            
             $unit = Unit::create($validated->validated());
 
             return $this->sendResponse($unit, 'Unit created successfully.');

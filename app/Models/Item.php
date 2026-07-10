@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Item extends Model
 {
 
-    protected $fillable = ['category_id', 'unit_id', 'sku', 'name', 'description', 'purchase_price', 'sale_price', 'status', 'barcode', 'reordered_level'];
+    protected $fillable = ['category_id', 'unit_id', 'sku', 'name', 'description', 'purchase_price', 'sale_price', 'status', 'barcode', 'reorder_level'];
     public function store()
     {
         return $this->belongsTo(store::class);

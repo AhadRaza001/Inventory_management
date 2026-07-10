@@ -71,9 +71,9 @@ class PurchaseOrderController extends ResponseController
         try {
             $data = $validated->validated();
 
-            $lastOrder     = Purchase_order::latest('id')->first();
-            $nextId        = $lastOrder ? $lastOrder->id + 1 : 1;
-            $data['po_no'] = 'PO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            // $lastOrder     = Purchase_order::latest('id')->first();
+            // $nextId        = $lastOrder ? $lastOrder->id + 1 : 1;
+            // $data['po_no'] = 'PO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
             // TODO: Calculate these from line items when po_details is implemented
             $data['sub_total']       = 0;
