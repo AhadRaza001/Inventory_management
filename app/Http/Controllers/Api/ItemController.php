@@ -148,7 +148,7 @@ class ItemController extends ResponseController
         try {
             $data = $validated->validated();
             // $data['sku']  = 'I-' . str_pad($request->sku, 6, '0', STR_PAD_LEFT);
-    
+
             $item = Item::create($data);
 
             return $this->sendResponse($item, 'Item created successfully.');
@@ -203,5 +203,24 @@ class ItemController extends ResponseController
         } catch (Exception $e) {
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
+    }
+
+    public function getBySku($sku)
+    {
+         $Esku = str_pad($sku, 6, '0', STR_PAD_LEFT);
+        
+        $item = Item::where('sku', $Esku)->first();
+
+        if (!$item) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Item not found.'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $item
+        ]);
     }
 }

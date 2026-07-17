@@ -44,6 +44,7 @@ Route::prefix('items')->name('items.')->group(function () {
     Route::get('/', [ItemController::class, 'index'])->name('index');
 
     Route::get('/{id}', [ItemController::class, 'single_item'])->name('show');
+    Route::get('/sku/{id}', [ItemController::class, 'getBySku'])->name('sku');
 
     Route::post('/', [ItemController::class, 'store'])->name('store');
 

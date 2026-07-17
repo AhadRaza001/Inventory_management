@@ -14,7 +14,7 @@ class GenerateNumberController extends ResponseController
     {
         $lastOrder = Item::latest('id')->first();
         $nextId = $lastOrder ? $lastOrder->id + 1 : 1;
-         $sku = 'I-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+         $sku = str_pad($nextId, 6, '0', STR_PAD_LEFT);
         return $this->sendResponse($sku,'Item sku is delivered.');
     }
     public function saleOrder()

@@ -22,6 +22,8 @@ return new class extends Migration
                 ->default('unpaid');
             $table->decimal('sub_total', 10, 2)->default(0);
             $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('discount_percentage', 10, 2)->default(0);
+            $table->decimal('taxPercent', 10, 2)->default(0);
             $table->decimal('tax_amount', 10, 2)->default(0);
             $table->decimal('grand_total', 10, 2)->default(0);
             $table->decimal('paid_amount', 10, 2)->default(0);

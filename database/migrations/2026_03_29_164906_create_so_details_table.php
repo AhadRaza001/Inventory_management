@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('so_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_order_id')->constrained()->onDelete('cascade');
-            $table->foreignId('item_id')->constrained()->onDelete('cascade');
+            $table->foreignId('item_id')->constrained()->onDelete('cascade')->unique();
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->decimal('quantity',10,2)->default(1);

@@ -209,10 +209,10 @@ class SaleOrderController extends ResponseController
         $validated = Validator::make(
             $request->all(),
             [
-                'customer_id'           => 'required|exists:customers,id',
-                'store_id'              => 'required|exists:stores,id',
-                'status'                => 'sometimes|in:open,delivered,cancelled,invoiced',
-                'amount_status'         => 'sometimes|in:paid,unpaid,partial',
+                // 'customer_id'           => 'required|exists:customers,id',
+                // 'store_id'              => 'required|exists:stores,id',
+                // 'status'                => 'sometimes|in:open,delivered,cancelled,invoiced',
+                // 'amount_status'         => 'sometimes|in:paid,unpaid,partial',
                 'customer_requisitions' => 'nullable|string',
                 'customer_reference'    => 'nullable|string',
             ]

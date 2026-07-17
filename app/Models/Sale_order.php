@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Sale_order extends Model
 {
-    protected $fillable = ['so_no','user_id','customer_id','store_id','status','amount_status','customer_requisitions','customer_reference'];
+    protected $fillable = ['so_no','user_id','customer_id','store_id','status','amount_status','customer_requisitions','customer_reference','sub_total','discount_amount','tax_amount','grand_total','due_amount'];
     public function item_ledger()
     {
         return $this->morphMany(Item_ledger::class, 'reference', 'reference_type', 'reference_id');

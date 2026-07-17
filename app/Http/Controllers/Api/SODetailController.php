@@ -13,16 +13,27 @@ use Illuminate\Support\Facades\Validator;
 
 class SoDetailController extends ResponseController
 {
-    private function recalculateSaleOrderTotals(Sale_order $saleOrder): void
+    private function recalculateSaleOrderTotals($id): void
     {
-        $lines = So_detail::where('sale_order_id', $saleOrder->id)->get();
+        $saleOrder = Sale_order::findOrFail($id);
 
-        $subTotal       = $lines->sum(fn($l) => $l->unit_price * $l->quantity);
-        $discountPercent = $saleOrder->discount_percentage ?? 0; // e.g. 10 means 10%
-        $discountAmount  = $subTotal * ($discountPercent / 100);
-        $taxAmount      = $lines->sum('tax_amount');
-        $grandTotal     = ($subTotal - $discountPercent) + $taxAmount;
-        $dueAmount      = $grandTotal - $saleOrder->paid_amount;
+        $lines = So_detail::with('item')
+            ->where('sale_order_id', $saleOrder->id)
+            ->get();
+
+        $subTotal = $lines->sum(function ($line) {
+            return ($line->item?->sale_price ?? 0) * $line->quantity;
+        });
+
+        $discountPercent = $saleOrder->discount_percentage ?? 0;
+        $discountAmount = $subTotal * ($discountPercent / 100);
+
+        $taxPercent = $saleOrder->taxPercent ?? 0;
+        $taxableAmount = $subTotal - $discountAmount;
+        $taxAmount = $taxableAmount * ($taxPercent / 100);
+
+        $grandTotal = ($subTotal - $discountAmount) + $taxAmount;
+        $dueAmount = $grandTotal - $saleOrder->paid_amount;
 
         $saleOrder->update([
             'sub_total'       => $subTotal,
@@ -106,9 +117,7 @@ class SoDetailController extends ResponseController
                 $detail = So_detail::create($data);
 
                 // Recalculate parent SaleOrder totals
-                $this->recalculateSaleOrderTotals(
-                    Sale_order::findOrFail($data['sale_order_id'])
-                );
+                $this->recalculateSaleOrderTotals($saleOrder->id);
 
                 return $detail;
             });
@@ -128,7 +137,7 @@ class SoDetailController extends ResponseController
             $request->all(),
             [
                 'item_id'         => 'required|exists:items,id',
-                'store_id'        => 'required|exists:stores,id',
+                // 'store_id'        => 'required|exists:stores,id',
                 'quantity'        => 'required|numeric|min:0.01',
                 'discount_amount' => 'nullable|numeric|min:0',
                 'tax_amount'      => 'nullable|numeric|min:0',
@@ -177,7 +186,7 @@ class SoDetailController extends ResponseController
                 $remaining = $newQuantity - $totalDelivered;
 
                 // ✅ Save all calculated values into $data
-                $data['delivered_now'] = $deliveredNow;
+                // $data['delivered_now'] = $deliveredNow;
                 $data['delivered_qty'] = $totalDelivered;  // accumulated total
                 $data['remaining_qty'] = $remaining;        // fresh remaining
 
@@ -186,9 +195,7 @@ class SoDetailController extends ResponseController
 
                 $detail->update($data);
 
-                $this->recalculateSaleOrderTotals(
-                    Sale_order::findOrFail($detail->sale_order_id)
-                );
+                $this->recalculateSaleOrderTotals($detail->sale_order_id);
 
                 return $detail->fresh();
             });
@@ -227,7 +234,7 @@ class SoDetailController extends ResponseController
                 $detail->delete();
 
                 // ✅ Recalculate after delete
-                $this->recalculateSaleOrderTotals($saleOrder);
+                $this->recalculateSaleOrderTotals($saleOrder->id);
             });
 
             // ✅ Bug 4 fixed — don't return deleted model
