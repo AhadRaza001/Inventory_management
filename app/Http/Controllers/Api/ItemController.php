@@ -31,6 +31,8 @@ class ItemController extends ResponseController
                 });
             }
 
+         
+
             // Sorting
             $query->orderBy(
                 $request->input('sortField', 'id'),
@@ -47,6 +49,25 @@ class ItemController extends ResponseController
                     if ($filter['field'] === 'global') {
                         continue;
                     }
+
+   if (str_contains($filter['field'], '.')) {
+
+        [$relation, $column] = explode('.', $filter['field']);
+
+        $query->whereHas($relation, function ($q) use ($column, $filter) {
+
+            match ($filter['operator']) {
+                'startsWith' => $q->where($column, 'like', $filter['value'].'%'),
+                'contains'   => $q->where($column, 'like', '%'.$filter['value'].'%'),
+                'endsWith'   => $q->where($column, 'like', '%'.$filter['value']),
+                'equals'     => $q->where($column, $filter['value']),
+                default      => null,
+            };
+
+        });
+
+    } else {
+
 
                     switch ($filter['operator']) {
 
@@ -90,6 +111,7 @@ class ItemController extends ResponseController
                             $query->where($filter['field'], '>=', $filter['value']);
                             break;
                     }
+                }
                 }
             }
 
@@ -207,8 +229,8 @@ class ItemController extends ResponseController
 
     public function getBySku($sku)
     {
-         $Esku = str_pad($sku, 6, '0', STR_PAD_LEFT);
-        
+        $Esku = str_pad($sku, 6, '0', STR_PAD_LEFT);
+
         $item = Item::where('sku', $Esku)->first();
 
         if (!$item) {

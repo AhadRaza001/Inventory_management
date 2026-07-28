@@ -185,6 +185,9 @@ Route::middleware('auth:sanctum')->prefix('packingslips')->name('packingslips.')
     Route::get('/single/{id}', [PackingslipController::class, 'single_packing_slip'])
         ->name('show');
 
+     Route::get('/getBySaleOrder', [PackingslipController::class, 'getBySaleOrder'])
+        ->name('bySaleOrder');
+
     Route::post('/', [PackingslipController::class, 'store'])
         ->name('store');
 
@@ -194,7 +197,7 @@ Route::middleware('auth:sanctum')->prefix('packingslips')->name('packingslips.')
     Route::delete('/{id}', [PackingslipController::class, 'delete'])
         ->name('delete');
 
-    Route::post('/dispatch/{id}', [PackingslipController::class, 'dispatch'])
+    Route::post('/{id}/dispatch', [PackingslipController::class, 'dispatch'])
         ->name('dispatch');
 });
 

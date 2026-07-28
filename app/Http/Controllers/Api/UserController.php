@@ -63,12 +63,15 @@ class UserController extends ResponseController
             }
 
             $user  = Auth::user();
-            $token = $user->createToken('api_token')->plainTextToken;
+            $token = $user->createToken('api_token');
+            $token->accessToken->update([
+                'expires_at' =>Carbon::now()->addDay(),
+            ]);
 
             return $this->sendResponse(
                 [
                     'user'       => $user,
-                    'token'      => $token,
+                    'token'      => $token->plainTextToken,
                     'token_type' => 'bearer',
                 ],
                 'User logged in successfully.'

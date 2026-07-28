@@ -17,10 +17,10 @@ use Illuminate\Support\Facades\Validator;
 
 class PackingslipController  extends ResponseController
 {
-    public function index($id) 
+    public function index($id)
     {
         try {
-            $packing_slips = Packing_slip::with('sale_order', 'store', 'user')->where('sale_order_id',$id);
+            $packing_slips = Packing_slip::with('sale_order', 'store', 'user')->where('sale_order_id', $id);
 
             $packingSlips = $packing_slips->latest()->paginate(20);
 
@@ -49,6 +49,26 @@ class PackingslipController  extends ResponseController
         }
     }
 
+    public function getBySaleOrder(Request $request)
+    {
+        try {
+            $id = $request->sale_order_id;
+            $packingSlip = Packing_slip::with(
+                'sale_order',
+                'store',
+                'user',
+                'packing_slip_details.item',
+                'packing_slip_details.so_detail'
+            )->where('sale_order_id', $id)->get();
+
+            return $this->sendResponse($packingSlip, 'Packing slip fetched successfully.');
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Packing slip not found.', $e->getMessage(), 404);
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = Validator::make(
@@ -63,6 +83,7 @@ class PackingslipController  extends ResponseController
                 'details'                     => 'required|array|min:1',
                 'details.*.so_detail_id'      => 'required|exists:so_details,id',
                 'details.*.item_id'           => 'required|exists:items,id',
+                'details.*.sku'               => 'nullable',
                 'details.*.ordered_qty'       => 'required|numeric|min:0',
                 'details.*.packed_qty'        => 'required|numeric|min:0',
             ]
@@ -122,10 +143,12 @@ class PackingslipController  extends ResponseController
 
                 $currentStock = $inStock - $outStock;
 
+                $item = Item::find($detail['item_id']);
                 if ($currentStock < $detail['packed_qty']) {
+                    DB::rollBack();
                     return $this->sendError(
                         'Insufficient stock.',
-                        'Not enough stock available for item ID: ' . $detail['item_id'],
+                        'Not enough stock available for Sku: ' . ($item->sku . ' ' . $item->name),
                         422
                     );
                 }
@@ -290,5 +313,4 @@ class PackingslipController  extends ResponseController
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
-
 }
