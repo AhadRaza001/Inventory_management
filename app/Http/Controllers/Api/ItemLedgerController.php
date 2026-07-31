@@ -1,9 +1,9 @@
 <?php
 
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\api\ResponseController;
+use App\Http\Controllers\Api\ResponseController;
 use App\Models\Item_ledger;
 use App\Models\Item;
 use App\Models\Store;

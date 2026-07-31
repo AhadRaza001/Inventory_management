@@ -1,18 +1,18 @@
 <?php
 
-use App\Http\Controllers\api\StoreController;
-use App\Http\Controllers\api\UnitController;
+use App\Http\Controllers\Api\StoreController;
+use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\api\CustomerController;
-use App\Http\Controllers\api\GenerateNumberController;
-use App\Http\Controllers\api\ItemController;
-use App\Http\Controllers\api\ItemLedgerController;
-use App\Http\Controllers\api\PackingslipController;
-use App\Http\Controllers\api\SaleOrderController;
-use App\Http\Controllers\api\SoDetailController;
-use App\Http\Controllers\api\PurchaseOrderController;
-use App\Http\Controllers\api\PoDetailController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\GenerateNumberController;
+use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\ItemLedgerController;
+use App\Http\Controllers\Api\PackingslipController;
+use App\Http\Controllers\Api\SaleOrderController;
+use App\Http\Controllers\Api\SoDetailController;
+use App\Http\Controllers\Api\PurchaseOrderController;
+use App\Http\Controllers\Api\PoDetailController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\api;
+namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\api\ResponseController;
+use App\Http\Controllers\Api\ResponseController;
 use App\Models\Po_detail;
 use App\Models\Purchase_order;
 use Illuminate\Http\Request;
