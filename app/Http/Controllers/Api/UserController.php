@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api;
 
 use App\Models\User;
+use App\Http\Controllers\api\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,7 +55,7 @@ class UserController extends ResponseController
 
         try {
             $credentials = $validated->validated();
-           if (!Auth::attempt($credentials)) {
+            if (!Auth::attempt($credentials)) {
                 return $this->sendError(
                     'Invalid credentials.',
                     'Email & password do not match our records.',
@@ -65,7 +66,7 @@ class UserController extends ResponseController
             $user  = Auth::user();
             $token = $user->createToken('api_token');
             $token->accessToken->update([
-                'expires_at' =>Carbon::now()->addDay(),
+                'expires_at' => Carbon::now()->addDay(),
             ]);
 
             return $this->sendResponse(
