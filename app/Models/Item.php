@@ -10,7 +10,7 @@ class Item extends Model
     protected $fillable = ['category_id', 'unit_id', 'sku', 'name', 'description', 'purchase_price', 'sale_price', 'status', 'barcode', 'reorder_level'];
     public function store()
     {
-        return $this->belongsTo(store::class);
+        return $this->belongsTo(Store::class);
     }
     public function category()
     {
@@ -18,7 +18,7 @@ class Item extends Model
     }
     public function unit()
     {
-        return $this->belongsTo(unit::class);
+        return $this->belongsTo(Unit::class);
     }
     public function so_detail()
     {
