@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 
-use App\Http\Controllers\api\ResponseController;
+use App\Http\Controllers\Api\ResponseController;
 use App\Models\Customer;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;

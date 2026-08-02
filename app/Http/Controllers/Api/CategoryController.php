@@ -187,4 +187,18 @@ class CategoryController extends ResponseController
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:categories,id',
+        ]);
+
+        Category::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Categories deleted successfully.'
+        ]);
+    }
 }

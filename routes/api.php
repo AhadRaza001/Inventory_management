@@ -36,6 +36,7 @@ Route::prefix('categories')->name('categories.')->group(function () {
 
     Route::post('/{id}', [CategoryController::class, 'update'])->name('update');
 
+    Route::delete('/bulk-delete', [CategoryController::class, 'bulkDelete']);
     Route::delete('/{id}', [CategoryController::class, 'delete'])->name('delete');
 });
 
