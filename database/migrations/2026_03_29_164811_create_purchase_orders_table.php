@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('po_no')->unique();
+            $table->string('po_no');
+            $table->unique(['company_id', 'po_no']);
             $table->enum('status', ['open', 'delivered', 'cancelled'])->default('open');
             $table->decimal('sub_total', 10, 2);
             $table->decimal('discount_amount', 10, 2)->default(0);

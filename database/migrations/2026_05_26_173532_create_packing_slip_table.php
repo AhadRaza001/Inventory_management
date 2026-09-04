@@ -14,10 +14,13 @@ return new class extends Migration
         // Packing Slip Header
         Schema::create('packing_slips', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('sale_order_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('ps_no')->unique();
+            $table->string('ps_no');
+            $table->unique(['company_id', 'ps_no']);
+
             $table->enum('status', ['draft', 'dispatched', 'cancelled'])->default('draft');
             $table->string('vehicle_no')->nullable();
             $table->string('driver_name')->nullable();

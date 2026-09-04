@@ -29,6 +29,9 @@ class UserController extends ResponseController
 
         try {
             $data             = $validated->validated();
+              if (Auth::check()) {
+                $data['company_id'] = Auth::user()->company_id;
+            }
             $data['password'] = Hash::make($data['password']);
 
             $user = User::create($data);

@@ -13,12 +13,16 @@ return new class extends Migration
     {
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
-            $table->string('sku')->unique();
-            $table->string('name')->unique();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('sku');
+            $table->string('name');
             $table->string('phone');
             $table->string('city');
             $table->text('address');
-            $table->string('email')->unique();
+            $table->string('email');
+            $table->unique(['company_id', 'name']);
+            $table->unique(['company_id', 'sku']);
+            $table->unique(['company_id', 'email']);
             $table->decimal('credit_limit',10,2);
             $table->timestamps();
         });

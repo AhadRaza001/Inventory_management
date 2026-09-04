@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('sale_orders', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('so_no')->unique();
+            $table->string('so_no');
+            $table->unique(['company_id', 'so_no']);
             $table->enum('status', ['open','partially_delivered', 'delivered', 'cancelled', 'invoiced'])->default('open');
             $table->enum('amount_status', ['paid', 'unpaid', 'partial'])
                 ->default('unpaid');

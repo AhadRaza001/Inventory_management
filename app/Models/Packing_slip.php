@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+use App\Traits\HasCompany;
 use Illuminate\Database\Eloquent\Model;
 
 class Packing_slip extends Model
 {
+    use HasCompany, BelongsToCompany;
        protected $fillable = [
+        'company_id',
         'sale_order_id',
         'store_id',
         'user_id',

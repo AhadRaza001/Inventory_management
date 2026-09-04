@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+use App\Traits\HasCompany;
 use Illuminate\Database\Eloquent\Model;
 
 class Store extends Model
 {
-    protected $fillable = ['name','description','address','phone'];
+    use HasCompany, BelongsToCompany;
+    protected $fillable = ['company_id','name','description','address','phone'];
      public function item(){
         return $this->hasMany(Item::class);
     }

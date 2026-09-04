@@ -188,4 +188,18 @@ class UnitController extends ResponseController
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
+     public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:categories,id',
+        ]);
+
+        Unit::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Units deleted successfully.'
+        ]);
+    }
 }

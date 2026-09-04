@@ -13,10 +13,15 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->string('customer_no')->unique();
-            $table->string('name')->unique();
-            $table->string('phone')->unique();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('customer_no');
+            $table->string('name');
+            $table->string('phone');
             $table->string('email')->nullable();
+            $table->unique(['company_id', 'customer_no']);
+            $table->unique(['company_id', 'name']);
+            $table->unique(['company_id', 'phone']);
+            $table->unique(['company_id', 'email']);
             $table->string('city');
             $table->text('address')->nullable();
             $table->decimal('credit_limit', 10, 2)->default(0);

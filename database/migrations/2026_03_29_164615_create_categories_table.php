@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->string('name', 32);
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->unique(['company_id', 'name']);
             $table->text('description');
             $table->timestamps();
         });

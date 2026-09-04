@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('stores', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('name');
+            $table->unique(['company_id', 'name']);
             $table->text('description')->nullable();
             $table->text('address');
             $table->string('phone',20)->nullable();

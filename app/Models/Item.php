@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+use App\Traits\HasCompany;
 use Illuminate\Database\Eloquent\Model;
 
 class Item extends Model
 {
-
+    use HasCompany, BelongsToCompany;
     protected $fillable = ['category_id', 'unit_id', 'sku', 'name', 'description', 'purchase_price', 'sale_price', 'status', 'barcode', 'reorder_level'];
     public function store()
     {

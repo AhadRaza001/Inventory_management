@@ -20,6 +20,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'company_id',
         'name',
         'email',
         'password',
@@ -71,5 +72,9 @@ class User extends Authenticatable
     public function invoice()
     {
         return $this->hasMany(Invoice::class);
+    }
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

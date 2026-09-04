@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('sale_returns', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('sale_order_id')->constrained()->onDelete('cascade');
             $table->foreignId('packing_slip_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('sr_no')->unique();
+            $table->string('sr_no');
+            $table->unique(['company_id', 'sr_no']);
             $table->enum('status', ['draft', 'posted', 'cancelled'])->default('draft');
             $table->enum('return_type', ['full', 'partial'])->default('partial');
             $table->text('reason')->nullable();

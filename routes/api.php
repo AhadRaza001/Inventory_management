@@ -21,11 +21,11 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post('login', [UserController::class, 'login']);
-Route::post('signup', [UserController::class, 'signup']);
+Route::post('signup', [UserController::class, 'signup'])->middleware('auth:sanctum');
 Route::post('logout', [UserController::class, 'logout'])->middleware('auth:sanctum');
 // ->middleware('auth:sanctum')
 
-Route::prefix('categories')->name('categories.')->group(function () {
+Route::prefix('categories')->name('categories.')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/', [CategoryController::class, 'index'])->name('index');
     Route::get('/all', [CategoryController::class, 'all']);
@@ -40,7 +40,7 @@ Route::prefix('categories')->name('categories.')->group(function () {
     Route::delete('/{id}', [CategoryController::class, 'delete'])->name('delete');
 });
 
-Route::prefix('items')->name('items.')->group(function () {
+Route::prefix('items')->name('items.')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/', [ItemController::class, 'index'])->name('index');
 
@@ -54,7 +54,7 @@ Route::prefix('items')->name('items.')->group(function () {
     Route::delete('/{id}', [ItemController::class, 'delete'])->name('delete');
 });
 
-Route::prefix('units')->name('units.')->group(function () {
+Route::prefix('units')->name('units.')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/', [UnitController::class, 'index'])->name('index');
 
@@ -63,11 +63,13 @@ Route::prefix('units')->name('units.')->group(function () {
     Route::post('/', [UnitController::class, 'store'])->name('store');
 
     Route::post('/{id}', [UnitController::class, 'update'])->name('update');
+    
+    Route::delete('/bulk-delete', [CategoryController::class, 'bulkDelete']);
 
     Route::delete('/{id}', [UnitController::class, 'delete'])->name('delete');
 });
 
-Route::prefix('stores')->name('stores.')->group(function () {
+Route::prefix('stores')->name('stores.')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/', [StoreController::class, 'index'])
         ->name('index');

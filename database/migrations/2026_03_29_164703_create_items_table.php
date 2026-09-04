@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('items', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->foreignId('unit_id')->constrained()->onDelete('cascade');
-            $table->string('sku')->unique();
+            $table->string('sku');
+            $table->unique(['company_id', 'sku']);
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('purchase_price');

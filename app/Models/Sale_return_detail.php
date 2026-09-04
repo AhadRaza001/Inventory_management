@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+use App\Traits\HasCompany;
 use Illuminate\Database\Eloquent\Model;
 
 class Sale_return_detail extends Model
 {
       protected $fillable = [
+        'company_id',
         'sale_return_id',
         'packing_slip_detail_id',
         'item_id',
