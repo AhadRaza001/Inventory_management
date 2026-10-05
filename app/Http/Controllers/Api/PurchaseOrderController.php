@@ -152,4 +152,19 @@ class PurchaseOrderController extends ResponseController
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
+
+     public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:purchase_orders,id',
+        ]);
+
+        Purchase_order::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Purchase Orders deleted successfully.'
+        ]);
+    }
 }

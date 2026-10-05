@@ -162,9 +162,11 @@ class SaleOrderController extends ResponseController
         $validated = Validator::make(
             $request->all(),
             [
+
                 'customer_id'           => 'required|exists:customers,id',
                 'store_id'              => 'required|exists:stores,id',
-                'status'                => 'sometimes|in:open,delivered,cancelled,invoiced',
+                'so_no'                 => 'required|string|max:255',
+                'status'                => 'sometimes|in:open,partially_delivered,delivered,cancelled,invoiced',
                 'amount_status'         => 'sometimes|in:paid,unpaid,partial',
                 'customer_requisitions' => 'nullable|string',
                 'customer_reference'    => 'nullable|string',
@@ -178,7 +180,7 @@ class SaleOrderController extends ResponseController
         try {
 
             $data = $validated->validated();
-            
+
             // $lastOrder      = Sale_order::latest('id')->first();
             // $nextId         = $lastOrder ? $lastOrder->id + 1 : 1;
             // $data['so_no']  = 'SO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
@@ -260,5 +262,20 @@ class SaleOrderController extends ResponseController
         } catch (Exception $e) {
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:sale_orders,id',
+        ]);
+
+        Sale_order::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Sale Orders deleted successfully.'
+        ]);
     }
 }

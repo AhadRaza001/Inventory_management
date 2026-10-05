@@ -51,6 +51,8 @@ Route::prefix('items')->name('items.')->middleware('auth:sanctum')->group(functi
 
     Route::post('/{id}', [ItemController::class, 'update'])->name('update');
 
+    Route::delete('/bulk-delete', [ItemController::class, 'bulkDelete']);
+
     Route::delete('/{id}', [ItemController::class, 'delete'])->name('delete');
 });
 
@@ -64,7 +66,7 @@ Route::prefix('units')->name('units.')->middleware('auth:sanctum')->group(functi
 
     Route::post('/{id}', [UnitController::class, 'update'])->name('update');
     
-    Route::delete('/bulk-delete', [CategoryController::class, 'bulkDelete']);
+    Route::delete('/bulk-delete', [UnitController::class, 'bulkDelete']);
 
     Route::delete('/{id}', [UnitController::class, 'delete'])->name('delete');
 });
@@ -100,6 +102,8 @@ Route::middleware('auth:sanctum')->prefix('saleorders')->name('saleorders.')->gr
 
     Route::put('/{id}', [SaleOrderController::class, 'update'])
         ->name('update');
+
+    Route::delete('/bulk-delete', [SaleOrderController::class, 'bulkDelete']);
 
     Route::delete('/{id}', [SaleOrderController::class, 'delete'])
         ->name('delete');
@@ -137,6 +141,8 @@ Route::middleware('auth:sanctum')->prefix('purchaseorders')->name('purchaseorder
     Route::post('/{id}', [PurchaseOrderController::class, 'update'])
         ->name('update');
 
+    Route::delete('/bulk-delete', [PurchaseOrderController::class, 'bulkDelete']);
+
     Route::delete('/{id}', [PurchaseOrderController::class, 'delete'])
         ->name('delete');
 });
@@ -166,7 +172,7 @@ Route::middleware('auth:sanctum')->prefix('customers')->name('customers.')->grou
     Route::get('/', [CustomerController::class, 'index'])
         ->name('index');
 
-    Route::get('single/{id}', [CustomerController::class, 'single_customer'])
+    Route::get('/{id}', [CustomerController::class, 'single_customer'])
         ->name('show');
 
     Route::post('/', [CustomerController::class, 'store'])
@@ -215,7 +221,7 @@ Route::middleware('auth:sanctum')->prefix('itemledgers')->group(function () {
 
 // numberGenerate
 Route::middleware('auth:sanctum')->prefix('generate')->group(function () {
-    Route::get('/sale-order', [GenerateNumberController::class, 'saleOrder']);
-    Route::get('/purchase-order', [GenerateNumberController::class, 'purchaseOrder']);
+    Route::get('/saleOrder', [GenerateNumberController::class, 'saleOrder']);
+    Route::get('/purchaseOrder', [GenerateNumberController::class, 'purchaseOrder']);
     Route::get('/item', [GenerateNumberController::class, 'item']);
 });

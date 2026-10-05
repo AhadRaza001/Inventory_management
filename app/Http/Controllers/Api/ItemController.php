@@ -245,4 +245,19 @@ class ItemController extends ResponseController
             'data' => $item
         ]);
     }
+
+     public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:items,id',
+        ]);
+
+        Item::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Items deleted successfully.'
+        ]);
+    }
 }
