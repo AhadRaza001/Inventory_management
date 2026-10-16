@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\SaleOrderController;
 use App\Http\Controllers\Api\SoDetailController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\PoDetailController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -65,7 +66,7 @@ Route::prefix('units')->name('units.')->middleware('auth:sanctum')->group(functi
     Route::post('/', [UnitController::class, 'store'])->name('store');
 
     Route::post('/{id}', [UnitController::class, 'update'])->name('update');
-    
+
     Route::delete('/bulk-delete', [UnitController::class, 'bulkDelete']);
 
     Route::delete('/{id}', [UnitController::class, 'delete'])->name('delete');
@@ -194,7 +195,7 @@ Route::middleware('auth:sanctum')->prefix('packingslips')->name('packingslips.')
     Route::get('/single/{id}', [PackingslipController::class, 'single_packing_slip'])
         ->name('show');
 
-     Route::get('/getBySaleOrder', [PackingslipController::class, 'getBySaleOrder'])
+    Route::get('/getBySaleOrder', [PackingslipController::class, 'getBySaleOrder'])
         ->name('bySaleOrder');
 
     Route::post('/', [PackingslipController::class, 'store'])
@@ -218,7 +219,16 @@ Route::middleware('auth:sanctum')->prefix('itemledgers')->group(function () {
     Route::get('/{id}',          [ItemLedgerController::class, 'show']);
     Route::post('/summary', [ItemLedgerController::class, 'inOutSummary']);
 });
-
+//Supplier
+Route::middleware('auth:sanctum')->prefix('suppliers')->name('suppliers.')->group(function () {
+    Route::get('/', [SupplierController::class, 'index'])->name('index');
+    Route::get('/all', [SupplierController::class, 'all'])->name('all');
+    Route::delete('/bulk-delete', [SupplierController::class, 'bulkDelete']);
+    Route::get('/{id}', [SupplierController::class, 'single_supplier'])->name('show');
+    Route::post('/', [SupplierController::class, 'store'])->name('store');
+    Route::post('/{id}', [SupplierController::class, 'update'])->name('update');
+    Route::delete('/{id}', [SupplierController::class, 'delete'])->name('delete');
+});
 // numberGenerate
 Route::middleware('auth:sanctum')->prefix('generate')->group(function () {
     Route::get('/saleOrder', [GenerateNumberController::class, 'saleOrder']);
