@@ -181,11 +181,6 @@ class SaleOrderController extends ResponseController
 
             $data = $validated->validated();
 
-            // $lastOrder      = Sale_order::latest('id')->first();
-            // $nextId         = $lastOrder ? $lastOrder->id + 1 : 1;
-            // $data['so_no']  = 'SO-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-
-            // TODO: Calculate these from line items when sale_order_items is implemented
             $data['sub_total']       = 0;
             $data['discount_amount'] = 0;
             $data['tax_amount']      = 0;

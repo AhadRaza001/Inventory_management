@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\SaleOrderController;
 use App\Http\Controllers\Api\SoDetailController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\PoDetailController;
-use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\Api\SupplierController ;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -234,4 +234,5 @@ Route::middleware('auth:sanctum')->prefix('generate')->group(function () {
     Route::get('/saleOrder', [GenerateNumberController::class, 'saleOrder']);
     Route::get('/purchaseOrder', [GenerateNumberController::class, 'purchaseOrder']);
     Route::get('/item', [GenerateNumberController::class, 'item']);
+    Route::get('/supplier', [GenerateNumberController::class, 'supplier']);
 });

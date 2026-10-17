@@ -1,133 +1,194 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\ResponseController;
 use App\Models\Supplier;
+use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class SupplierController extends ResponseController
 {
-    // columns the table is allowed to sort/filter/search on
-    private $sortable = ['id', 'sku', 'name', 'phone', 'city', 'email', 'credit_limit', 'created_at'];
-    private $searchable = ['sku', 'name', 'phone', 'city', 'email'];
+    // columns the table is allowed to sort/filter on
+    private $columns = ['id', 'sku', 'name', 'phone', 'city', 'email', 'address', 'credit_limit', 'created_at'];
 
-    // GET /suppliers  (paginated, searchable, sortable, filterable)
     public function index(Request $request)
     {
         try {
-            $perPage   = (int) $request->input('per_page', 10);
-            $search    = $request->input('search');
-            $sortField = $request->input('sortField', 'id');
-            $sortOrder = $request->input('sortOrder', 'desc');
-            $filters   = json_decode($request->input('filters', '[]'), true);
-
-            if (!in_array($sortField, $this->sortable)) {
-                $sortField = 'id';
-            }
-            if ($sortOrder !== 'asc' && $sortOrder !== 'desc') {
-                $sortOrder = 'desc';
-            }
-
             $query = Supplier::query();
 
-            if (!empty($search)) {
+            // Global Search
+            if ($request->input('search')) {
+
+                $search = $request->input('search');
+
                 $query->where(function ($q) use ($search) {
-                    foreach ($this->searchable as $column) {
-                        $q->orWhere($column, 'like', '%' . $search . '%');
-                    }
+                    $q->where('sku', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             }
 
-            // expects filters like: [{"field": "city", "value": "Lahore"}]
-            if (is_array($filters)) {
-                foreach ($filters as $filter) {
-                    $field = $filter['field'] ?? null;
-                    $value = $filter['value'] ?? null;
+            // Sorting
+            $sortField = $request->input('sortField', 'id');
+            $sortOrder = $request->input('sortOrder', 'desc');
 
-                    if ($field && $value !== null && $value !== '' && in_array($field, $this->sortable)) {
-                        $query->where($field, 'like', '%' . $value . '%');
+            if (!in_array($sortField, $this->columns)) {
+                $sortField = 'id';
+            }
+
+            if (!in_array($sortOrder, ['asc', 'desc'])) {
+                $sortOrder = 'desc';
+            }
+
+            $query->orderBy($sortField, $sortOrder);
+
+            // Column Filters
+            $filters = json_decode($request->filters, true);
+
+            if ($filters) {
+                foreach ($filters as $filter) {
+
+                    // Skip global filter entries — handled separately via $request->input('search')
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+
+                    if (!in_array($filter['field'], $this->columns)) {
+                        continue;
+                    }
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
                     }
                 }
             }
 
-            $suppliers = $query->orderBy($sortField, $sortOrder)->paginate($perPage);
+            // Pagination
+            $suppliers = $query->paginate(
+                $request->input('per_page', 10)
+            );
 
-            return $this->sendResponse($suppliers, 'Suppliers retrieved successfully.');
-        } catch (\Throwable $e) {
-            return $this->sendError('Failed to fetch suppliers.', [$e->getMessage()], 500);
+            return $this->sendPaginatedResponse(
+                $suppliers,
+                'Suppliers fetched successfully.'
+            );
+        } catch (Exception $e) {
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 
-    // GET /suppliers/all  (unpaginated, for dropdowns)
+    // unpaginated, for dropdowns
     public function all()
     {
         try {
             $suppliers = Supplier::orderBy('name')->get(['id', 'sku', 'name']);
 
-            return $this->sendResponse($suppliers, 'Suppliers retrieved successfully.');
-        } catch (\Throwable $e) {
-            return $this->sendError('Failed to fetch suppliers.', [$e->getMessage()], 500);
+            return $this->sendResponse($suppliers, 'Suppliers fetched successfully.');
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    // GET /suppliers/{id}
     public function single_supplier($id)
     {
         try {
             $supplier = Supplier::findOrFail($id);
 
-            return $this->sendResponse($supplier, 'Supplier retrieved successfully.');
+            return $this->sendResponse($supplier, 'Supplier fetched successfully.');
         } catch (ModelNotFoundException $e) {
-            return $this->sendError('Supplier not found.', [], 404);
-        } catch (\Throwable $e) {
-            return $this->sendError('Failed to fetch supplier.', [$e->getMessage()], 500);
+            return $this->sendError('Supplier not found.', $e->getMessage(), 404);
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    // POST /suppliers
     public function store(Request $request)
     {
         $companyId = Auth::user()->company_id;
 
-        $validator = Validator::make($request->all(), [
-            'sku'          => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('suppliers', 'sku')->where('company_id', $companyId),
-            ],
-            'name'         => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('suppliers', 'name')->where('company_id', $companyId),
-            ],
-            'phone'        => 'required|string|max:255',
-            'city'         => 'required|string|max:255',
-            'address'      => 'required|string',
-            'email'        => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('suppliers', 'email')->where('company_id', $companyId),
-            ],
-            'credit_limit' => 'required|numeric|min:0',
-        ]);
+        $validated = Validator::make(
+            $request->all(),
+            [
+                'sku' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    Rule::unique('suppliers', 'sku')->where('company_id', $companyId),
+                ],
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('suppliers', 'name')->where('company_id', $companyId),
+                ],
+                'phone'   => 'required|string|max:255',
+                'city'    => 'required|string|max:255',
+                'address' => 'required|string',
+                'email'   => [
+                    'required',
+                    'email',
+                    'max:255',
+                    Rule::unique('suppliers', 'email')->where('company_id', $companyId),
+                ],
+                'credit_limit' => 'required|numeric|min:0',
+            ]
+        );
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors(), 422);
+        if ($validated->fails()) {
+            return $this->validationError($validated->errors());
         }
 
-        DB::beginTransaction();
-
         try {
-            $data = $validator->validated();
+            $data = $validated->validated();
 
             // auto-generate SUP-000001 style number when sku is not given
             if (empty($data['sku'])) {
@@ -137,118 +198,88 @@ class SupplierController extends ResponseController
 
             $supplier = Supplier::create($data);
 
-            DB::commit();
-
-            return $this->sendResponse($supplier, 'Supplier created successfully.', 201);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return $this->sendError('Failed to create supplier.', [$e->getMessage()], 500);
+            return $this->sendResponse($supplier, 'Supplier created successfully.');
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    // POST /suppliers/{id}
     public function update(Request $request, $id)
     {
         $companyId = Auth::user()->company_id;
 
-        $validator = Validator::make($request->all(), [
-            'sku'          => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('suppliers', 'sku')->where('company_id', $companyId)->ignore($id),
-            ],
-            'name'         => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('suppliers', 'name')->where('company_id', $companyId)->ignore($id),
-            ],
-            'phone'        => 'required|string|max:255',
-            'city'         => 'required|string|max:255',
-            'address'      => 'required|string',
-            'email'        => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('suppliers', 'email')->where('company_id', $companyId)->ignore($id),
-            ],
-            'credit_limit' => 'required|numeric|min:0',
-        ]);
+        $validated = Validator::make(
+            $request->all(),
+            [
+                'sku' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('suppliers', 'sku')->where('company_id', $companyId)->ignore($id),
+                ],
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('suppliers', 'name')->where('company_id', $companyId)->ignore($id),
+                ],
+                'phone'   => 'required|string|max:255',
+                'city'    => 'required|string|max:255',
+                'address' => 'required|string',
+                'email'   => [
+                    'required',
+                    'email',
+                    'max:255',
+                    Rule::unique('suppliers', 'email')->where('company_id', $companyId)->ignore($id),
+                ],
+                'credit_limit' => 'required|numeric|min:0',
+            ]
+        );
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors(), 422);
+        if ($validated->fails()) {
+            return $this->validationError($validated->errors());
         }
-
-        DB::beginTransaction();
 
         try {
             $supplier = Supplier::findOrFail($id);
-            $supplier->update($validator->validated());
-
-            DB::commit();
+            $supplier->update($validated->validated());
 
             return $this->sendResponse($supplier, 'Supplier updated successfully.');
         } catch (ModelNotFoundException $e) {
-            DB::rollBack();
-
-            return $this->sendError('Supplier not found.', [], 404);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return $this->sendError('Failed to update supplier.', [$e->getMessage()], 500);
+            return $this->sendError('Supplier not found.', $e->getMessage(), 404);
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    // DELETE /suppliers/{id}
     public function delete($id)
     {
-        DB::beginTransaction();
-
         try {
             $supplier = Supplier::findOrFail($id);
+            $deleted_supplier = $supplier;
             $supplier->delete();
 
-            DB::commit();
-
-            return $this->sendResponse([], 'Supplier deleted successfully.');
+            return $this->sendResponse($deleted_supplier, 'Supplier deleted successfully.');
         } catch (ModelNotFoundException $e) {
-            DB::rollBack();
-
-            return $this->sendError('Supplier not found.', [], 404);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return $this->sendError('Failed to delete supplier.', [$e->getMessage()], 500);
+            return $this->sendError('Supplier not found.', $e->getMessage(), 404);
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    // DELETE /suppliers/bulk-delete   body: { "ids": [1, 2, 3] }
     public function bulkDelete(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'ids'   => 'required|array|min:1',
-            'ids.*' => 'integer',
+        $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer|exists:suppliers,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors(), 422);
-        }
+        // company global scope makes sure only this company's rows are deleted
+        Supplier::whereIn('id', $request->ids)->delete();
 
-        DB::beginTransaction();
-
-        try {
-            // company global scope makes sure only this company's rows are deleted
-            $deleted = Supplier::whereIn('id', $request->ids)->delete();
-
-            DB::commit();
-
-            return $this->sendResponse(['deleted' => $deleted], 'Suppliers deleted successfully.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return $this->sendError('Failed to delete suppliers.', [$e->getMessage()], 500);
-        }
+        return response()->json([
+            'status'  => true,
+            'message' => 'Suppliers deleted successfully.'
+        ]);
     }
 }

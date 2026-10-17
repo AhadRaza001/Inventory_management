@@ -31,7 +31,7 @@ class ItemController extends ResponseController
                 });
             }
 
-         
+
 
             // Sorting
             $query->orderBy(
@@ -50,68 +50,66 @@ class ItemController extends ResponseController
                         continue;
                     }
 
-   if (str_contains($filter['field'], '.')) {
+                    if (str_contains($filter['field'], '.')) {
 
-        [$relation, $column] = explode('.', $filter['field']);
+                        [$relation, $column] = explode('.', $filter['field']);
 
-        $query->whereHas($relation, function ($q) use ($column, $filter) {
+                        $query->whereHas($relation, function ($q) use ($column, $filter) {
 
-            match ($filter['operator']) {
-                'startsWith' => $q->where($column, 'like', $filter['value'].'%'),
-                'contains'   => $q->where($column, 'like', '%'.$filter['value'].'%'),
-                'endsWith'   => $q->where($column, 'like', '%'.$filter['value']),
-                'equals'     => $q->where($column, $filter['value']),
-                default      => null,
-            };
-
-        });
-
-    } else {
+                            match ($filter['operator']) {
+                                'startsWith' => $q->where($column, 'like', $filter['value'] . '%'),
+                                'contains'   => $q->where($column, 'like', '%' . $filter['value'] . '%'),
+                                'endsWith'   => $q->where($column, 'like', '%' . $filter['value']),
+                                'equals'     => $q->where($column, $filter['value']),
+                                default      => null,
+                            };
+                        });
+                    } else {
 
 
-                    switch ($filter['operator']) {
+                        switch ($filter['operator']) {
 
-                        case 'contains':
-                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
-                            break;
+                            case 'contains':
+                                $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                                break;
 
-                        case 'notContains':
-                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
-                            break;
+                            case 'notContains':
+                                $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                                break;
 
-                        case 'startsWith':
-                            $query->where($filter['field'], 'like', $filter['value'] . '%');
-                            break;
+                            case 'startsWith':
+                                $query->where($filter['field'], 'like', $filter['value'] . '%');
+                                break;
 
-                        case 'endsWith':
-                            $query->where($filter['field'], 'like', '%' . $filter['value']);
-                            break;
+                            case 'endsWith':
+                                $query->where($filter['field'], 'like', '%' . $filter['value']);
+                                break;
 
-                        case 'equals':
-                            $query->where($filter['field'], '=', $filter['value']);
-                            break;
+                            case 'equals':
+                                $query->where($filter['field'], '=', $filter['value']);
+                                break;
 
-                        case 'notEquals':
-                            $query->where($filter['field'], '!=', $filter['value']);
-                            break;
+                            case 'notEquals':
+                                $query->where($filter['field'], '!=', $filter['value']);
+                                break;
 
-                        case 'lt':
-                            $query->where($filter['field'], '<', $filter['value']);
-                            break;
+                            case 'lt':
+                                $query->where($filter['field'], '<', $filter['value']);
+                                break;
 
-                        case 'lte':
-                            $query->where($filter['field'], '<=', $filter['value']);
-                            break;
+                            case 'lte':
+                                $query->where($filter['field'], '<=', $filter['value']);
+                                break;
 
-                        case 'gt':
-                            $query->where($filter['field'], '>', $filter['value']);
-                            break;
+                            case 'gt':
+                                $query->where($filter['field'], '>', $filter['value']);
+                                break;
 
-                        case 'gte':
-                            $query->where($filter['field'], '>=', $filter['value']);
-                            break;
+                            case 'gte':
+                                $query->where($filter['field'], '>=', $filter['value']);
+                                break;
+                        }
                     }
-                }
                 }
             }
 
@@ -169,8 +167,6 @@ class ItemController extends ResponseController
 
         try {
             $data = $validated->validated();
-            // $data['sku']  = 'I-' . str_pad($request->sku, 6, '0', STR_PAD_LEFT);
-
             $item = Item::create($data);
 
             return $this->sendResponse($item, 'Item created successfully.');
@@ -246,7 +242,7 @@ class ItemController extends ResponseController
         ]);
     }
 
-     public function bulkDelete(Request $request)
+    public function bulkDelete(Request $request)
     {
         $request->validate([
             'ids' => 'required|array',
