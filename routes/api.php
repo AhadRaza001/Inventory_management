@@ -151,10 +151,10 @@ Route::middleware('auth:sanctum')->prefix('purchaseorders')->name('purchaseorder
 
 Route::middleware('auth:sanctum')->prefix('podetails')->name('podetails.')->group(function () {
 
-    Route::get('/{id}', [PoDetailController::class, 'index'])
+    Route::get('index', [PoDetailController::class, 'index'])
         ->name('index');
 
-    Route::get('single/{id}', [PoDetailController::class, 'single_po_detail'])
+    Route::get('/{id}', [PoDetailController::class, 'single_po_detail'])
         ->name('show');
 
     Route::post('/', [PoDetailController::class, 'store'])

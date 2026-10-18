@@ -96,8 +96,6 @@ class PurchaseOrderController extends ResponseController
         $validated = Validator::make(
             $request->all(),
             [
-                'supplier_id'           => 'required|exists:suppliers,id',
-                'store_id'              => 'required|exists:stores,id',
                 'status'                => 'sometimes|in:open,delivered,cancelled',
                 'customer_requisitions' => 'nullable|string',
                 'customer_reference'    => 'nullable|string',
