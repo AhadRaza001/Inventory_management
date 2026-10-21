@@ -9,6 +9,7 @@ class Packing_slip_detail extends Model
     protected $fillable = [
         'packing_slip_id',
         'so_detail_id',
+        'po_detail_id',
         'item_id',
         'ordered_qty',
         'packed_qty',
@@ -28,5 +29,9 @@ class Packing_slip_detail extends Model
     public function item()
     {
         return $this->belongsTo(Item::class, 'item_id');
+    }
+    public function po_detail()
+    {
+        return $this->belongsTo(Po_detail::class);
     }
 }

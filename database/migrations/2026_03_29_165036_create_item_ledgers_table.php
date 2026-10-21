@@ -25,11 +25,12 @@ return new class extends Migration
             ]);
 
             $table->enum('reference_type', [
-                'purchase_order',
-                'sale_order',
+                'purchase',
+                'sale',
                 'return',
                 'adjustment',
-                'transfer'
+                'transfer',
+                'packing_slip'
             ])->nullable();
 
             $table->unsignedBigInteger('reference_id')->nullable();

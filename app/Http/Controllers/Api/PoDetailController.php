@@ -102,7 +102,6 @@ class PoDetailController extends ResponseController
                 'unit_cost'       => 'nullable|numeric|min:0',
                 'discount_amount' => 'nullable|numeric|min:0',
                 'tax_amount'      => 'nullable|numeric|min:0',
-                'status'          => 'sometimes|in:open,delivered',
             ]
         );
 
@@ -112,7 +111,18 @@ class PoDetailController extends ResponseController
 
         try {
             $poDetail = Po_detail::findOrFail($id);
-            $poDetail->update($validated->validated());
+
+            $data = $validated->validated();
+
+            // Keep delivered quantity unchanged when editing the PO line.
+            $deliveredQty = (float) $poDetail->delivered_qty;
+
+            // Recalculate status from ordered vs delivered quantity.
+            $data['status'] = $deliveredQty >= (float) $data['quantity']
+                ? 'delivered'
+                : 'open';
+
+            $poDetail->update($data);
 
             // Recalculate parent purchase order totals
             $this->recalculatePurchaseOrderTotals($poDetail->purchase_order_id);
@@ -170,7 +180,7 @@ class PoDetailController extends ResponseController
         $purchaseOrder->update([
             'sub_total'       => $sub_total,
             'discount_amount' => $discount_amount,
-            'tax_amount'      => $tax_amount,   
+            'tax_amount'      => $tax_amount,
             'grand_total'     => $grand_total,
             'due_amount'      => $due_amount,
         ]);

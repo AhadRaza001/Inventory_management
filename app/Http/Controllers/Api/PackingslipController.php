@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Item_ledger;
 use App\Models\Packing_slip;
 use App\Models\Packing_slip_detail;
+use App\Models\Purchase_order;
 use App\Models\Sale_order;
 use App\Models\So_detail;
 use Exception;
@@ -17,14 +18,41 @@ use Illuminate\Support\Facades\Validator;
 
 class PackingslipController  extends ResponseController
 {
+    private const SLIP_RELATIONS = [
+        'sale_order',
+        'purchase_order',
+        'store',
+        'user',
+        'packing_slip_details.item',
+        'packing_slip_details.so_detail',
+        'packing_slip_details.po_detail',
+    ];
+
+    /* -----------------------------------------------------------------
+     |  Listing / fetching
+     | ----------------------------------------------------------------- */
+
+    // Slips of one sale order (existing route keeps working)
     public function index($id)
     {
+        return $this->listByColumn('sale_order_id', $id);
+    }
+
+    // Slips of one purchase order (new route)
+    public function indexByPurchaseOrder($id)
+    {
+        return $this->listByColumn('purchase_order_id', $id);
+    }
+
+    private function listByColumn(string $column, $id)
+    {
         try {
-            $packing_slips = Packing_slip::with('sale_order', 'store', 'user')->where('sale_order_id', $id);
+            $slips = Packing_slip::with('sale_order', 'purchase_order', 'store', 'user')
+                ->where($column, $id)
+                ->latest()
+                ->paginate(20);
 
-            $packingSlips = $packing_slips->latest()->paginate(20);
-
-            return $this->sendPaginatedResponse($packingSlips, 'Packing slips fetched successfully.');
+            return $this->sendPaginatedResponse($slips, 'Packing slips fetched successfully.');
         } catch (Exception $e) {
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
@@ -33,13 +61,7 @@ class PackingslipController  extends ResponseController
     public function single_packing_slip($id)
     {
         try {
-            $packingSlip = Packing_slip::with(
-                'sale_order',
-                'store',
-                'user',
-                'packing_slip_details.item',
-                'packing_slip_details.so_detail'
-            )->findOrFail($id);
+            $packingSlip = Packing_slip::with(self::SLIP_RELATIONS)->findOrFail($id);
 
             return $this->sendResponse($packingSlip, 'Packing slip fetched successfully.');
         } catch (ModelNotFoundException $e) {
@@ -52,111 +74,116 @@ class PackingslipController  extends ResponseController
     public function getBySaleOrder(Request $request)
     {
         try {
-            $id = $request->sale_order_id;
-            $packingSlip = Packing_slip::with(
-                'sale_order',
-                'store',
-                'user',
-                'packing_slip_details.item',
-                'packing_slip_details.so_detail'
-            )->where('sale_order_id', $id)->get();
+            $packingSlip = Packing_slip::with(self::SLIP_RELATIONS)
+                ->where('type', 'sale')
+                ->where('sale_order_id', $request->sale_order_id)
+                ->get();
 
             return $this->sendResponse($packingSlip, 'Packing slip fetched successfully.');
-        } catch (ModelNotFoundException $e) {
-            return $this->sendError('Packing slip not found.', $e->getMessage(), 404);
         } catch (Exception $e) {
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
+    public function getByPurchaseOrder(Request $request)
+    {
+        try {
+            $packingSlip = Packing_slip::with(self::SLIP_RELATIONS)
+                ->where('type', 'purchase')
+                ->where('purchase_order_id', $request->purchase_order_id)
+                ->get();
+
+            return $this->sendResponse($packingSlip, 'Packing slip fetched successfully.');
+        } catch (Exception $e) {
+            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+        }
+    }
+
+    /* -----------------------------------------------------------------
+     |  Store
+     | ----------------------------------------------------------------- */
+
     public function store(Request $request)
     {
-        $validated = Validator::make(
-            $request->all(),
-            [
-                'sale_order_id'               => 'required|exists:sale_orders,id',
-                'store_id'                    => 'required|exists:stores,id',
-                'vehicle_no'                  => 'nullable|string',
-                'driver_name'                 => 'nullable|string',
-                'driver_phone'                => 'nullable|string',
-                'remarks'                     => 'nullable|string',
-                'details'                     => 'required|array|min:1',
-                'details.*.so_detail_id'      => 'required|exists:so_details,id',
-                'details.*.item_id'           => 'required|exists:items,id',
-                'details.*.sku'               => 'nullable',
-                'details.*.ordered_qty'       => 'required|numeric|min:0',
-                'details.*.packed_qty'        => 'required|numeric|min:0',
-            ]
-        );
+        $validated = Validator::make($request->all(), [
+            'type'                   => 'required|in:sale,purchase',
+            'sale_order_id'          => 'required_if:type,sale|nullable|exists:sale_orders,id',
+            'purchase_order_id'      => 'required_if:type,purchase|nullable|exists:purchase_orders,id',
+            'store_id'               => 'required|exists:stores,id',
+            'vehicle_no'             => 'nullable|string',
+            'driver_name'            => 'nullable|string',
+            'driver_phone'           => 'nullable|string',
+            'remarks'                => 'nullable|string',
+            'details'                => 'required|array|min:1',
+            'details.*.so_detail_id' => 'required_if:type,sale|nullable|exists:so_details,id',
+            'details.*.po_detail_id' => 'required_if:type,purchase|nullable|exists:po_details,id',
+            'details.*.item_id'      => 'required|exists:items,id',
+            'details.*.ordered_qty'  => 'required|numeric|min:0',
+            'details.*.packed_qty'   => 'required|numeric|min:0',
+        ]);
 
         if ($validated->fails()) {
             return $this->validationError($validated->errors());
         }
 
         try {
-            // Sale order must be open to create a packing slip
-            $saleOrder = Sale_order::findOrFail($request->sale_order_id);
+            $data   = $validated->validated();
+            $isSale = $data['type'] === 'sale';
 
-            if ($saleOrder->status !== 'open') {
+            // The source order must be open
+            $order = $isSale
+                ? Sale_order::findOrFail($data['sale_order_id'])
+                : Purchase_order::findOrFail($data['purchase_order_id']);
+
+            if ($order->status !== 'open') {
                 return $this->sendError(
                     'Cannot create packing slip.',
-                    'Packing slips can only be created for open sale orders.',
+                    'Packing slips can only be created for open orders.',
                     422
                 );
             }
 
             DB::beginTransaction();
 
-            $data = $validated->validated();
-
-            // Generate unique PS number
-            $lastSlip      = Packing_slip::latest('id')->first();
-            $nextId        = $lastSlip ? $lastSlip->id + 1 : 1;
-            $data['ps_no'] = 'PS-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-
-            $data['user_id'] = auth()->id();
-            $data['status']  = 'draft';
+            // Unique slip number: PS-000001 for sale, GRN-000001 for purchase
+            $lastId = Packing_slip::lockForUpdate()->max('id') ?? 0;
+            $psNo   = ($isSale ? 'PS-' : 'GRN-') . str_pad($lastId + 1, 6, '0', STR_PAD_LEFT);
 
             $packingSlip = Packing_slip::create([
-                'sale_order_id' => $data['sale_order_id'],
-                'store_id'      => $data['store_id'],
-                'user_id'       => $data['user_id'],
-                'ps_no'         => $data['ps_no'],
-                'status'        => $data['status'],
-                'vehicle_no'    => $data['vehicle_no'] ?? null,
-                'driver_name'   => $data['driver_name'] ?? null,
-                'driver_phone'  => $data['driver_phone'] ?? null,
-                'remarks'       => $data['remarks'] ?? null,
+                'type'              => $data['type'],
+                'sale_order_id'     => $isSale ? $data['sale_order_id'] : null,
+                'purchase_order_id' => $isSale ? null : $data['purchase_order_id'],
+                'store_id'          => $data['store_id'],
+                'user_id'           => auth()->id(),
+                'ps_no'             => $psNo,
+                'status'            => 'draft',
+                'vehicle_no'        => $data['vehicle_no'] ?? null,
+                'driver_name'       => $data['driver_name'] ?? null,
+                'driver_phone'      => $data['driver_phone'] ?? null,
+                'remarks'           => $data['remarks'] ?? null,
             ]);
 
-            // Create packing slip detail lines
             foreach ($data['details'] as $detail) {
-                $inStock = Item_ledger::where('item_id', $detail['item_id'])
-                    ->where('store_id', $data['store_id'])
-                    ->where('transaction_type', 'IN')
-                    ->sum('quantity');
+                // Sale takes stock out, so it must be available. Purchase adds stock.
+                if ($isSale) {
+                    $stock = $this->stockBalance($detail['item_id'], $data['store_id']);
 
-                $outStock = Item_ledger::where('item_id', $detail['item_id'])
-                    ->where('store_id', $data['store_id'])
-                    ->where('transaction_type', 'OUT')
-                    ->sum('quantity');
+                    if ($stock < $detail['packed_qty']) {
+                        DB::rollBack();
+                        $item = Item::find($detail['item_id']);
 
-                $currentStock = $inStock - $outStock;
-
-                $item = Item::find($detail['item_id']);
-                if ($currentStock < $detail['packed_qty']) {
-                    DB::rollBack();
-                    return $this->sendError(
-                        'Insufficient stock.',
-                        'Not enough stock available for Sku: ' . ($item->sku . ' ' . $item->name),
-                        422
-                    );
+                        return $this->sendError(
+                            'Insufficient stock.',
+                            'Not enough stock available for Sku: ' . $item->sku . ' ' . $item->name,
+                            422
+                        );
+                    }
                 }
-
 
                 Packing_slip_detail::create([
                     'packing_slip_id' => $packingSlip->id,
-                    'so_detail_id'    => $detail['so_detail_id'],
+                    'so_detail_id'    => $isSale ? $detail['so_detail_id'] : null,
+                    'po_detail_id'    => $isSale ? null : $detail['po_detail_id'],
                     'item_id'         => $detail['item_id'],
                     'ordered_qty'     => $detail['ordered_qty'],
                     'packed_qty'      => $detail['packed_qty'],
@@ -166,33 +193,33 @@ class PackingslipController  extends ResponseController
             DB::commit();
 
             return $this->sendResponse(
-                $packingSlip->load('sale_order', 'store', 'user', 'packing_slip_details.item'),
+                $packingSlip->load(self::SLIP_RELATIONS),
                 'Packing slip created successfully.'
             );
         } catch (ModelNotFoundException $e) {
             DB::rollBack();
-            return $this->sendError('Sale order not found.', $e->getMessage(), 404);
+            return $this->sendError('Order not found.', $e->getMessage(), 404);
         } catch (Exception $e) {
             DB::rollBack();
             return $this->sendError('Something went wrong.', $e->getMessage(), 500);
         }
     }
 
-    /**
-     * POST /packing-slips/{id}/dispatch
-     * Dispatches the packing slip:
-     *   1. Creates Item Ledger OUT entries for each detail line
-     *   2. Updates Sale Order status to 'delivered'
-     *   3. Marks Packing Slip as 'dispatched'
-     */
+    /* -----------------------------------------------------------------
+     |  Dispatch
+     |  sale     -> ledger OUT, stock decreases, order becomes 'delivered'
+     |  purchase -> ledger IN,  stock increases, order becomes 'received'
+     | ----------------------------------------------------------------- */
+
     public function dispatch($id)
     {
         try {
+            $slip = Packing_slip::with([
+                'packing_slip_details.so_detail',
+                'packing_slip_details.po_detail',
+            ])->findOrFail($id);
 
-            $packingSlip = Packing_slip::with(['packing_slip_details.so_detail'])
-                ->findOrFail($id);
-
-            if ($packingSlip->status !== 'draft') {
+            if ($slip->status !== 'draft') {
                 return $this->sendError(
                     'Cannot dispatch packing slip.',
                     'Only draft packing slips can be dispatched.',
@@ -200,101 +227,158 @@ class PackingslipController  extends ResponseController
                 );
             }
 
-            // 1. PRE-CHECK STOCK AVAILABILITY BEFORE TRANSACTION
-            foreach ($packingSlip->packing_slip_details as $detail) {
+            $isSale = $slip->type === 'sale';
 
-                if (!$detail->packed_qty || $detail->packed_qty <= 0) {
-                    continue;
-                }
-
-                $stock = Item_ledger::where('item_id', $detail->item_id)
-                    ->where('store_id', $packingSlip->store_id)
-                    ->selectRaw('SUM(CASE WHEN transaction_type = "IN" THEN quantity ELSE -quantity END) as balance')
-                    ->value('balance') ?? 0;
-
-                if ($stock < $detail->packed_qty) {
-                    return $this->sendError(
-                        'Insufficient stock.',
-                        "Item ID {$detail->item_id} has only {$stock} units available but {$detail->packed_qty} required.",
-                        422
-                    );
-                }
-            }
+            /*
+         * Sale and purchase both need to track the quantity
+         * already processed on the order line.
+         *
+         * For PO details, the actual column is delivered_qty.
+         */
+            $doneField = 'delivered_qty';
+            $ledgerType = $isSale ? 'OUT' : 'IN';
+            $doneStatus = 'delivered';
 
             DB::beginTransaction();
 
-            foreach ($packingSlip->packing_slip_details as $detail) {
+            foreach ($slip->packing_slip_details as $detail) {
 
-                // SKIP ZERO OR NULL QUANTITY LINES
                 if (!$detail->packed_qty || $detail->packed_qty <= 0) {
                     continue;
                 }
 
-                $item_id = $detail->item_id;
-                $item =  Item::findOrFail($item_id);
+                /*
+             * Get the corresponding order detail.
+             */
+                $line = $isSale
+                    ? $detail->so_detail
+                    : $detail->po_detail;
 
-                // 2. STOCK OUT (Ledger)
+                if (!$line) {
+                    DB::rollBack();
+
+                    return $this->sendError(
+                        'Order line missing.',
+                        'A packing slip line has no linked order line.',
+                        422
+                    );
+                }
+
+                /*
+             * Current quantity already processed.
+             */
+                $currentDone = (float) ($line->$doneField ?? 0);
+
+                /*
+             * Quantity after this packing slip.
+             */
+                $newDone = $currentDone + (float) $detail->packed_qty;
+
+                /*
+             * Never allow more than ordered quantity.
+             */
+                if ($newDone > (float) $line->quantity) {
+                    DB::rollBack();
+
+                    return $this->sendError(
+                        'Quantity exceeds ordered quantity.',
+                        'You cannot process more than the ordered quantity.',
+                        422
+                    );
+                }
+
+                /*
+             * Sale order:
+             * Check available stock before creating the OUT ledger.
+             */
+                if ($isSale) {
+                    $stock = $this->stockBalance(
+                        $detail->item_id,
+                        $slip->store_id
+                    );
+
+                    if ($stock < $detail->packed_qty) {
+                        DB::rollBack();
+
+                        return $this->sendError(
+                            'Insufficient stock.',
+                            "Item ID {$detail->item_id} has only {$stock} units available but {$detail->packed_qty} required.",
+                            422
+                        );
+                    }
+                }
+
+                $item = Item::findOrFail($detail->item_id);
+
+                /*
+             * Create inventory ledger entry.
+             */
                 Item_ledger::create([
                     'item_id'          => $detail->item_id,
-                    'store_id'         => $packingSlip->store_id,
-                    'transaction_type' => 'OUT',
-                    'reference_type'   => 'sale_order',
-                    'reference_id'     => $packingSlip->id,
+                    'store_id'         => $slip->store_id,
+                    'transaction_type' => $ledgerType,
+                    'reference_type'   => 'packing_slip',
+                    'reference_id'     => $slip->id,
                     'quantity'         => $detail->packed_qty,
-                    'unit_cost'        => $item->sale_price,
+                    'unit_cost'        => $isSale
+                        ? $item->sale_price
+                        : ($line->unit_cost ?? $item->purchase_price),
                     'transaction_date' => now(),
                     'created_by'       => auth()->id(),
                 ]);
 
-                $delivered_qty = $detail->so_detail->delivered_qty;
-                $pked_qty = $detail->packed_qty;
-                $check_qty = $delivered_qty + $pked_qty;
+                /*
+             * Update processed quantity.
+             */
+                $line->$doneField = $newDone;
 
-                // 3. UPDATE SO DETAIL
-                if ($detail->so_detail) {
-                    $detail->so_detail->delivered_qty += $detail->packed_qty;
-                    $detail->so_detail->remaining_qty  = max(0, $detail->so_detail->remaining_qty - $detail->packed_qty);
-                    //Check if total qty is delivered than it make its status delivered
-                    if ($check_qty == $detail->so_detail->quantity) {
-                        $detail->so_detail->status = 'delivered';
-                    }
-                }
-                // If user dispatch more qty than the order quantity it return the  error
-                if ($check_qty > $detail->so_detail->quantity) {
-                    DB::rollBack();
+                /*
+             * Calculate remaining quantity.
+             * Do NOT save it because remaining_qty does not
+             * exist in your current PO schema.
+             */
+                $remainingQty = max(
+                    0,
+                    (float) $line->quantity - $newDone
+                );
 
-                    return $this->sendError(
-                        'Dispatch quantity exceeds ordered quantity.',
-                        'You cannot deliver more than the ordered quantity.',
-                        422
-                    );
-                }
-                // now save this detail
-                $detail->so_detail->save();
+                /*
+             * Current schema only supports:
+             * open / delivered
+             */
+                $line->status = $remainingQty <= 0
+                    ? 'delivered'
+                    : 'open';
+
+                $line->save();
             }
 
-            // 4. UPDATE SALE ORDER STATUS
-            $saleOrder = Sale_order::find($packingSlip->sale_order_id);
+            /*
+         * Update parent order status.
+         */
+            $order = $isSale
+                ? $slip->sale_order
+                : $slip->purchase_order;
 
-            if ($saleOrder) {
+            if ($order) {
+                $lines = $isSale
+                    ? $order->so_detail()->get()
+                    : $order->po_detail()->get();
 
-                $allDetails     = $saleOrder->so_detail()->get();
-                $totalOrdered   = $allDetails->sum('quantity');
-                $totalDelivered = $allDetails->sum('delivered_qty');
+                $totalOrdered = $lines->sum('quantity');
+                $totalProcessed = $lines->sum($doneField);
 
-                if ($totalDelivered >= $totalOrdered) {
-                    $status = 'delivered';
-                } elseif ($totalDelivered > 0) {
-                    $status = 'open';
-                } else {
-                    $status = $saleOrder->status;
+                if ($totalProcessed >= $totalOrdered) {
+                    $order->update([
+                        'status' => 'delivered',
+                    ]);
                 }
-
-                $saleOrder->update(['status' => $status]);
             }
 
-            // 5. MARK PACKING SLIP DISPATCHED
-            $packingSlip->update([
+            /*
+         * Mark packing slip as dispatched.
+         */
+            $slip->update([
                 'status'        => 'dispatched',
                 'dispatch_date' => now(),
             ]);
@@ -302,15 +386,39 @@ class PackingslipController  extends ResponseController
             DB::commit();
 
             return $this->sendResponse(
-                $packingSlip->load('sale_order', 'store', 'user', 'packing_slip_details.item'),
+                $slip->load(self::SLIP_RELATIONS),
                 'Packing slip dispatched successfully.'
             );
         } catch (ModelNotFoundException $e) {
+
             DB::rollBack();
-            return $this->sendError('Packing slip not found.', $e->getMessage(), 404);
+
+            return $this->sendError(
+                'Packing slip not found.',
+                $e->getMessage(),
+                404
+            );
         } catch (Exception $e) {
+
             DB::rollBack();
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
+    }
+
+    /* -----------------------------------------------------------------
+     |  Helpers
+     | ----------------------------------------------------------------- */
+
+    private function stockBalance($itemId, $storeId): float
+    {
+        return (float) (Item_ledger::where('item_id', $itemId)
+            ->where('store_id', $storeId)
+            ->selectRaw("SUM(CASE WHEN transaction_type = 'IN' THEN quantity ELSE -quantity END) as balance")
+            ->value('balance') ?? 0);
     }
 }

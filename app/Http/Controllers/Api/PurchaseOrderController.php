@@ -12,35 +12,6 @@ use Illuminate\Support\Facades\Validator;
 
 class PurchaseOrderController extends ResponseController
 {
-    // public function index(Request $request)
-    // {
-    //     try {
-    //         $query = Purchase_order::with('supplier', 'store', 'user');
-
-    //         // Optional filters
-    //         if ($request->filled('status')) {
-    //             $query->where('status', $request->status);
-    //         }
-
-    //         if ($request->filled('store_id')) {
-    //             $query->where('store_id', $request->store_id);
-    //         }
-
-    //         if ($request->filled('supplier_id')) {
-    //             $query->where('supplier_id', $request->supplier_id);
-    //         }
-
-    //         $purchaseOrders = $query->latest()->paginate(10);
-
-    //         return $this->sendPaginatedResponse($purchaseOrders, 'Purchase orders fetched successfully.');
-    //     } catch (Exception $e) {
-    //         return $this->sendError('Something went wrong.', $e->getMessage(), 500);
-    //     }
-    // }
-
-
-
-
     // Columns that can be sorted / filtered from the table (whitelist)
     private const PO_COLUMNS = [
         'id',

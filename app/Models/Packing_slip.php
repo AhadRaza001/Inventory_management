@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 class Packing_slip extends Model
 {
     use HasCompany, BelongsToCompany;
-       protected $fillable = [
+    protected $fillable = [
         'company_id',
+        'type',
         'sale_order_id',
+        'purchase_order_id',
         'store_id',
         'user_id',
         'ps_no',
@@ -22,22 +24,26 @@ class Packing_slip extends Model
         'remarks',
         'dispatch_date',
     ];
-    
+
     public function sale_order()
     {
         return $this->belongsTo(Sale_order::class);
     }
- 
+    public function purchase_order()
+    {
+        return $this->belongsTo(Purchase_order::class);
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);
     }
- 
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
- 
+
     public function packing_slip_details()
     {
         return $this->hasMany(Packing_slip_detail::class);

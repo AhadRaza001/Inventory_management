@@ -187,28 +187,21 @@ Route::middleware('auth:sanctum')->prefix('customers')->name('customers.')->grou
 });
 
 
-Route::middleware('auth:sanctum')->prefix('packingslips')->name('packingslips.')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/{id}', [PackingslipController::class, 'index'])
-        ->name('index');
+    Route::prefix('packing-slips')->controller(PackingslipController::class)->group(function () {
 
-    Route::get('/single/{id}', [PackingslipController::class, 'single_packing_slip'])
-        ->name('show');
+        Route::post('/', 'store');
 
-    Route::get('/getBySaleOrder', [PackingslipController::class, 'getBySaleOrder'])
-        ->name('bySaleOrder');
+        Route::get('/by-sale-order', 'getBySaleOrder');
+        Route::get('/by-purchase-order', 'getByPurchaseOrder');
 
-    Route::post('/', [PackingslipController::class, 'store'])
-        ->name('store');
+        Route::get('/sale-order/{id}', 'index');
+        Route::get('/purchase-order/{id}', 'indexByPurchaseOrder');
 
-    Route::post('/{id}', [PackingslipController::class, 'update'])
-        ->name('update');
-
-    Route::delete('/{id}', [PackingslipController::class, 'delete'])
-        ->name('delete');
-
-    Route::post('/{id}/dispatch', [PackingslipController::class, 'dispatch'])
-        ->name('dispatch');
+        Route::get('/{id}', 'single_packing_slip');
+        Route::post('/{id}/dispatch', 'dispatch');
+    });
 });
 
 Route::middleware('auth:sanctum')->prefix('itemledgers')->group(function () {
