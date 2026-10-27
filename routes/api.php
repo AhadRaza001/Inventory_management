@@ -9,11 +9,13 @@ use App\Http\Controllers\Api\GenerateNumberController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\ItemLedgerController;
 use App\Http\Controllers\Api\PackingslipController;
+use App\Http\Controllers\Api\PackingSlipDetailController;
 use App\Http\Controllers\Api\SaleOrderController;
 use App\Http\Controllers\Api\SoDetailController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\PoDetailController;
-use App\Http\Controllers\Api\SupplierController ;
+use App\Http\Controllers\Api\SupplierController;
+use App\Models\Packing_slip_detail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -200,7 +202,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/purchase-order/{id}', 'indexByPurchaseOrder');
 
         Route::get('/{id}', 'single_packing_slip');
+        
         Route::post('/{id}/dispatch', 'dispatch');
+    });
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::prefix('packing-slips-detail')->controller(PackingSlipDetailController::class)->group(function () {
+
+        Route::get('/{id}', 'index');
     });
 });
 

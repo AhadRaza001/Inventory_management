@@ -21,6 +21,7 @@ class PackingslipController  extends ResponseController
     private const SLIP_RELATIONS = [
         'sale_order',
         'purchase_order',
+        'customer',
         'store',
         'user',
         'packing_slip_details.item',
@@ -162,6 +163,9 @@ class PackingslipController  extends ResponseController
                 'driver_phone'      => $data['driver_phone'] ?? null,
                 'remarks'           => $data['remarks'] ?? null,
             ]);
+
+
+
 
             foreach ($data['details'] as $detail) {
                 // Sale takes stock out, so it must be available. Purchase adds stock.

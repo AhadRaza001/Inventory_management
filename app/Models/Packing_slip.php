@@ -39,6 +39,20 @@ class Packing_slip extends Model
         return $this->belongsTo(Store::class);
     }
 
+
+    public function customer()
+    {
+        return $this->hasOneThrough(
+            Customer::class,
+            Sale_order::class,
+            'id',             // Sale_order primary key
+            'id',             // Customer primary key
+            'sale_order_id',  // Packing_slip foreign key
+            'customer_id'     // Sale_order foreign key
+        );
+    }
+
+
     public function user()
     {
         return $this->belongsTo(User::class);

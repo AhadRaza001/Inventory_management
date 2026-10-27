@@ -69,6 +69,7 @@ return new class extends Migration
             $table->foreignId('packing_slip_id')
                 ->constrained()
                 ->onDelete('cascade');
+            
 
             // Either SO detail OR PO detail
             $table->foreignId('so_detail_id')

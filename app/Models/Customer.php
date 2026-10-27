@@ -18,6 +18,10 @@ class Customer extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+     public function packingslip()
+    {
+        return $this->hasMany(Packing_slip::class);
+    }
     public function payment()
     {
         return $this->hasMany(Payment::class);
