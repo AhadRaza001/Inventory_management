@@ -223,6 +223,7 @@ Route::middleware('auth:sanctum')->prefix('itemledgers')->group(function () {
     Route::get('/{id}',          [ItemLedgerController::class, 'show']);
     Route::post('/summary', [ItemLedgerController::class, 'inOutSummary']);
 });
+
 //Supplier
 Route::middleware('auth:sanctum')->prefix('suppliers')->name('suppliers.')->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('index');

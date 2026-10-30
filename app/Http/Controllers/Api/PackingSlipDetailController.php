@@ -10,10 +10,10 @@ use Illuminate\Http\Request;
 
 class PackingSlipDetailController extends ResponseController
 {
-    public function index($saleorderId)
+    public function index($id)
     {
         try {
-            $packingSlip = Packing_slip::where('sale_order_id', $saleorderId)->firstOrFail();
+            $packingSlip = Packing_slip::where('sale_order_id', $id)->orwhere('purchase_order_id', $id)->firstOrFail();
 
             $details = Packing_slip_detail::with('item')
                 ->where('packing_slip_id', $packingSlip->id)

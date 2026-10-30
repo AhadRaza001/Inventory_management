@@ -37,6 +37,7 @@ return new class extends Migration
 
             $table->decimal('quantity', 12, 3);
             $table->decimal('unit_cost', 12, 2)->nullable();
+            $table->string('order_no');
 
             $table->dateTime('transaction_date');
 

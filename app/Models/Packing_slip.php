@@ -23,6 +23,7 @@ class Packing_slip extends Model
         'driver_phone',
         'remarks',
         'dispatch_date',
+        "order_no"
     ];
 
     public function sale_order()

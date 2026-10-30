@@ -58,7 +58,6 @@ return new class extends Migration
             $table->string('driver_phone')->nullable();
             $table->text('remarks')->nullable();
             $table->dateTime('dispatch_date')->nullable();
-
             $table->timestamps();
         });
 

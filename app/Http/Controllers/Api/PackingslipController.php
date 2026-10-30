@@ -103,7 +103,6 @@ class PackingslipController  extends ResponseController
     /* -----------------------------------------------------------------
      |  Store
      | ----------------------------------------------------------------- */
-
     public function store(Request $request)
     {
         $validated = Validator::make($request->all(), [
@@ -135,6 +134,10 @@ class PackingslipController  extends ResponseController
             $order = $isSale
                 ? Sale_order::findOrFail($data['sale_order_id'])
                 : Purchase_order::findOrFail($data['purchase_order_id']);
+
+            $orderNo = $isSale
+                ? $order->so_no
+                : $order->po_no;
 
             if ($order->status !== 'open') {
                 return $this->sendError(
@@ -314,6 +317,16 @@ class PackingslipController  extends ResponseController
 
                 $item = Item::findOrFail($detail->item_id);
 
+                // Get source order
+                $order = $isSale
+                    ? Sale_order::findOrFail($slip->sale_order_id)
+                    : Purchase_order::findOrFail($slip->purchase_order_id);
+
+                // Get order number
+                $orderNo = $isSale
+                    ? $order->so_no
+                    : $order->po_no;
+
                 /*
              * Create inventory ledger entry.
              */
@@ -321,12 +334,14 @@ class PackingslipController  extends ResponseController
                     'item_id'          => $detail->item_id,
                     'store_id'         => $slip->store_id,
                     'transaction_type' => $ledgerType,
-                    'reference_type'   => 'packing_slip',
+                    'reference_type'   => $slip->type,
                     'reference_id'     => $slip->id,
                     'quantity'         => $detail->packed_qty,
                     'unit_cost'        => $isSale
                         ? $item->sale_price
                         : ($line->unit_cost ?? $item->purchase_price),
+                    'order_no'             => $orderNo,
+
                     'transaction_date' => now(),
                     'created_by'       => auth()->id(),
                 ]);

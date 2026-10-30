@@ -17,6 +17,7 @@ class Item_ledger extends Model
         'reference_id',
         'quantity',
         'unit_cost',
+        'order_no',
         'transaction_date',
         'created_by',
     ];
