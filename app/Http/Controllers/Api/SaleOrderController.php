@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class SaleOrderController extends ResponseController
 {
@@ -120,6 +121,38 @@ class SaleOrderController extends ResponseController
 
                         case 'gte':
                             $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+
+                        case 'dateIs':
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate('created_at', $date);
+                            break;
+
+                        case 'dateIsNot':
+                            $query->whereDate(
+                                $filter['field'],
+                                '!=',
+                                Carbon::parse($filter['value'])->setTimezone('Asia/Karachi')->toDateString()
+                            );
+                            break;
+
+                        case 'dateBefore':
+                            $query->whereDate(
+                                $filter['field'],
+                                '<',
+                                Carbon::parse($filter['value'])->setTimezone('Asia/Karachi')->toDateString()
+                            );
+                            break;
+
+                        case 'dateAfter':
+                            $query->whereDate(
+                                $filter['field'],
+                                '>',
+                                Carbon::parse($filter['value'])->setTimezone('Asia/Karachi')->toDateString()
+                            );
                             break;
                     }
                 }
@@ -245,13 +278,13 @@ class SaleOrderController extends ResponseController
                     'Only orders with status "open" or "cancelled" can be deleted.',
                     422
                 );
+            } else {
+
+                $deleted_sale_order = $saleOrder;
+                $saleOrder->delete();
+                So_detail::where('sale_order_id', $id)->delete();
+                return $this->sendResponse($deleted_sale_order, 'Sale order deleted successfully.');
             }
-
-            $deleted_sale_order = $saleOrder;
-            $saleOrder->delete();
-            So_detail::where('sale_order_id', $id)->delete();
-
-            return $this->sendResponse($deleted_sale_order, 'Sale order deleted successfully.');
         } catch (ModelNotFoundException $e) {
             return $this->sendError('Sale order not found.', $e->getMessage(), 404);
         } catch (Exception $e) {

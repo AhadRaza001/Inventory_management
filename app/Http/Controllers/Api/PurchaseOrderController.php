@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\ResponseController;
 use App\Models\Po_detail;
 use App\Models\Purchase_order;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -41,7 +42,8 @@ class PurchaseOrderController extends ResponseController
     public function index(Request $request)
     {
         try {
-            $query = Purchase_order::with('supplier', 'store', 'user');
+
+            $query = Purchase_order::with(['supplier', 'store', 'user']);
 
             // Optional exact filters
             if ($request->filled('status')) {
@@ -56,56 +58,166 @@ class PurchaseOrderController extends ResponseController
                 $query->where('supplier_id', $request->supplier_id);
             }
 
-            // Global search
-            if ($request->filled('search')) {
+            // Global Search
+            if ($request->input('search')) {
+
                 $search = $request->input('search');
 
                 $query->where(function ($q) use ($search) {
-                    $q->where('po_no', 'like', "%$search%")
-                        ->orWhere('customer_reference', 'like', "%$search%")
-                        ->orWhere('customer_requisitions', 'like', "%$search%")
-                        ->orWhereHas('supplier', fn($s) => $s->where('name', 'like', "%$search%"))
-                        ->orWhereHas('store', fn($s) => $s->where('name', 'like', "%$search%"));
+
+                    $q->where('po_no', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('customer_reference', 'like', "%{$search}%")
+                        ->orWhere('customer_requisitions', 'like', "%{$search}%")
+                        ->orWhereHas('supplier', function ($supplier) use ($search) {
+                            $supplier->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('store', function ($store) use ($search) {
+                            $store->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('user', function ($user) use ($search) {
+                            $user->where('name', 'like', "%{$search}%");
+                        });
                 });
             }
 
-            // Column filters
-            if ($request->filled('filters')) {
-                $filters = json_decode($request->filters, true);
+            // Sorting
+            $query->orderBy(
+                $request->input('sortField', 'id'),
+                $request->input('sortOrder', 'desc')
+            );
 
-                if (is_array($filters)) {
-                    foreach ($filters as $filter) {
-                        if (
-                            !isset($filter['field'], $filter['operator'], $filter['value']) ||
-                            $filter['field'] === 'global'
-                        ) {
-                            continue;
-                        }
+            // Column Filters
+            $filters = json_decode($request->filters, true);
 
-                        $this->applyColumnFilter(
-                            $query,
-                            $filter['field'],
-                            $filter['operator'],
-                            $filter['value']
-                        );
+            if ($filters) {
+
+                foreach ($filters as $filter) {
+
+                    // Skip global filter
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+
+                    if ($filter['field'] === 'supplier.name') {
+                        $query->whereHas('supplier', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    if ($filter['field'] === 'store.name') {
+                        $query->whereHas('store', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    if ($filter['field'] === 'user.name') {
+                        $query->whereHas('user', function ($q) use ($filter) {
+                            $q->where('name', 'like', '%' . $filter['value'] . '%');
+                        });
+                        continue;
+                    }
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+
+                        case 'dateIs':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '=', $date);
+                            break;
+
+                        case 'dateIsNot':
+                            $timezone = $request->input('timezone', 'UTC');
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '!=', $date);
+                            break;
+
+                        case 'dateBefore':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '<', $date);
+                            break;
+
+                        case 'dateAfter':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '>', $date);
+                            break;
                     }
                 }
             }
 
-            // Sorting (only whitelisted columns, otherwise fall back to id desc)
-            $sortField = $request->input('sortField', 'id');
-            if (!in_array($sortField, self::PO_COLUMNS, true)) {
-                $sortField = 'id';
-            }
-            $sortOrder = strtolower($request->input('sortOrder', 'desc')) === 'asc' ? 'asc' : 'desc';
-            $query->orderBy($sortField, $sortOrder);
+            // Pagination
+            $purchaseOrders = $query->paginate(
+                $request->input('per_page', 10)
+            );
 
-            $perPage = (int) $request->input('per_page', 10);
-            $purchaseOrders = $query->paginate($perPage > 0 ? $perPage : 10);
-
-            return $this->sendPaginatedResponse($purchaseOrders, 'Purchase orders fetched successfully.');
+            return $this->sendPaginatedResponse(
+                $purchaseOrders,
+                'Purchase orders fetched successfully.'
+            );
         } catch (Exception $e) {
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 
@@ -243,13 +355,12 @@ class PurchaseOrderController extends ResponseController
                     'Only orders with status "open" or "cancelled" can be deleted.',
                     422
                 );
+            } else {
+                $deleted_purchase_order = $purchaseOrder;
+                $purchaseOrder->delete();
+                Po_detail::where('purchase_order_id', $id)->delete();
+                return $this->sendResponse($deleted_purchase_order, 'Purchase order deleted successfully.');
             }
-
-            $deleted_purchase_order = $purchaseOrder;
-            $purchaseOrder->delete();
-            Po_detail::where('purchase_order_id', $id)->delete();
-
-            return $this->sendResponse($deleted_purchase_order, 'Purchase order deleted successfully.');
         } catch (ModelNotFoundException $e) {
             return $this->sendError('Purchase order not found.', $e->getMessage(), 404);
         } catch (Exception $e) {

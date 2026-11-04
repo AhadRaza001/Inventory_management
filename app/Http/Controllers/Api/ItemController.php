@@ -15,13 +15,14 @@ use Illuminate\Support\Facades\Validator;
 
 class ItemController extends ResponseController
 {
+
     public function index(Request $request)
     {
         try {
             $query = Item::with(['category', 'unit']);
 
             // Global Search
-            if ($request->input('search')) {
+            if ($request->filled('search')) {
 
                 $search = $request->input('search');
 
@@ -31,28 +32,85 @@ class ItemController extends ResponseController
                 });
             }
 
-
-
             // Sorting
-            $query->orderBy(
-                $request->input('sortField', 'id'),
-                $request->input('sortOrder', 'desc')
-            );
+            $sortField = $request->input('sortField', 'id');
+            $sortOrder = strtolower($request->input('sortOrder', 'desc'));
+
+            // Allowed sorting columns
+            $allowedSortFields = [
+                'id' => 'items.id',
+                'name' => 'items.name',
+                'sku' => 'items.sku',
+                'category.name' => 'categories.name',
+                'unit.name' => 'units.name',
+            ];
+
+            if (isset($allowedSortFields[$sortField])) {
+
+                $column = $allowedSortFields[$sortField];
+
+                if ($sortField === 'category.name') {
+                    $query->leftJoin(
+                        'categories',
+                        'items.category_id',
+                        '=',
+                        'categories.id'
+                    );
+                }
+
+                if ($sortField === 'unit.name') {
+                    $query->leftJoin(
+                        'units',
+                        'items.unit_id',
+                        '=',
+                        'units.id'
+                    );
+                }
+
+                $query->orderBy(
+                    $column,
+                    $sortOrder === 'asc' || $sortOrder === '1'
+                        ? 'asc'
+                        : 'desc'
+                );
+            }
 
             // Column Filters
-            $filters = json_decode($request->filters, true);
+            $filters = json_decode($request->input('filters', '[]'), true);
 
             if ($filters) {
+
                 foreach ($filters as $filter) {
 
-                    // Skip global filter entries — handled separately via $request->input('search')
+                    if (
+                        empty($filter['field']) ||
+                        !isset($filter['operator']) ||
+                        !array_key_exists('value', $filter)
+                    ) {
+                        continue;
+                    }
+
+                    // Skip global filter
                     if ($filter['field'] === 'global') {
                         continue;
                     }
 
                     if (str_contains($filter['field'], '.')) {
 
-                        [$relation, $column] = explode('.', $filter['field']);
+                        [$relation, $column] = explode('.', $filter['field'], 2);
+
+                        // Only allow known relationships and columns
+                        $allowedRelations = [
+                            'category' => ['name'],
+                            'unit' => ['name'],
+                        ];
+
+                        if (
+                            !isset($allowedRelations[$relation]) ||
+                            !in_array($column, $allowedRelations[$relation])
+                        ) {
+                            continue;
+                        }
 
                         $query->whereHas($relation, function ($q) use ($column, $filter) {
 
@@ -60,53 +118,67 @@ class ItemController extends ResponseController
                                 'startsWith' => $q->where($column, 'like', $filter['value'] . '%'),
                                 'contains'   => $q->where($column, 'like', '%' . $filter['value'] . '%'),
                                 'endsWith'   => $q->where($column, 'like', '%' . $filter['value']),
-                                'equals'     => $q->where($column, $filter['value']),
+                                'equals'     => $q->where($column, '=', $filter['value']),
+                                'notEquals'  => $q->where($column, '!=', $filter['value']),
                                 default      => null,
                             };
                         });
                     } else {
 
+                        // Allowed item columns
+                        $allowedColumns = [
+                            'name',
+                            'sku',
+                            'purchase_price',
+                            'sale_price',
+                        ];
+
+                        if (!in_array($filter['field'], $allowedColumns)) {
+                            continue;
+                        }
+
+                        $field = 'items.' . $filter['field'];
 
                         switch ($filter['operator']) {
 
                             case 'contains':
-                                $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                                $query->where($field, 'like', '%' . $filter['value'] . '%');
                                 break;
 
                             case 'notContains':
-                                $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                                $query->where($field, 'not like', '%' . $filter['value'] . '%');
                                 break;
 
                             case 'startsWith':
-                                $query->where($filter['field'], 'like', $filter['value'] . '%');
+                                $query->where($field, 'like', $filter['value'] . '%');
                                 break;
 
                             case 'endsWith':
-                                $query->where($filter['field'], 'like', '%' . $filter['value']);
+                                $query->where($field, 'like', '%' . $filter['value']);
                                 break;
 
                             case 'equals':
-                                $query->where($filter['field'], '=', $filter['value']);
+                                $query->where($field, '=', $filter['value']);
                                 break;
 
                             case 'notEquals':
-                                $query->where($filter['field'], '!=', $filter['value']);
+                                $query->where($field, '!=', $filter['value']);
                                 break;
 
                             case 'lt':
-                                $query->where($filter['field'], '<', $filter['value']);
+                                $query->where($field, '<', $filter['value']);
                                 break;
 
                             case 'lte':
-                                $query->where($filter['field'], '<=', $filter['value']);
+                                $query->where($field, '<=', $filter['value']);
                                 break;
 
                             case 'gt':
-                                $query->where($filter['field'], '>', $filter['value']);
+                                $query->where($field, '>', $filter['value']);
                                 break;
 
                             case 'gte':
-                                $query->where($filter['field'], '>=', $filter['value']);
+                                $query->where($field, '>=', $filter['value']);
                                 break;
                         }
                     }
@@ -123,6 +195,7 @@ class ItemController extends ResponseController
                 'Items fetched successfully.'
             );
         } catch (Exception $e) {
+
             return $this->sendError(
                 'Something went wrong.',
                 $e->getMessage(),
@@ -130,6 +203,7 @@ class ItemController extends ResponseController
             );
         }
     }
+
 
     public function single_item($id)
     {
