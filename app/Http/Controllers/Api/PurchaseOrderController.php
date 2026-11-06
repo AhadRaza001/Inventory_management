@@ -221,45 +221,6 @@ class PurchaseOrderController extends ResponseController
         }
     }
 
-    private function applyColumnFilter($query, string $field, string $operator, $value): void
-    {
-        // operator => [sql operator, value pattern]
-        $map = [
-            'contains'    => ['like', "%$value%"],
-            'notContains' => ['not like', "%$value%"],
-            'startsWith'  => ['like', "$value%"],
-            'endsWith'    => ['like', "%$value"],
-            'equals'      => ['=', $value],
-            'notEquals'   => ['!=', $value],
-            'lt'          => ['<', $value],
-            'lte'         => ['<=', $value],
-            'gt'          => ['>', $value],
-            'gte'         => ['>=', $value],
-        ];
-
-        if (!isset($map[$operator])) {
-            return;
-        }
-
-        [$sqlOperator, $sqlValue] = $map[$operator];
-
-        // Related column, e.g. "supplier.name"
-        if (str_contains($field, '.')) {
-            [$relation, $column] = explode('.', $field, 2);
-
-            if (in_array($column, self::RELATION_COLUMNS[$relation] ?? [], true)) {
-                $query->whereHas($relation, fn($q) => $q->where($column, $sqlOperator, $sqlValue));
-            }
-            return;
-        }
-
-        // Own column
-        if (in_array($field, self::PO_COLUMNS, true)) {
-            $query->where($field, $sqlOperator, $sqlValue);
-        }
-    }
-
-
     public function single_purchase_order($id)
     {
         try {

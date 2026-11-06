@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Supplier;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -104,6 +105,42 @@ class SupplierController extends ResponseController
                         case 'gte':
                             $query->where($filter['field'], '>=', $filter['value']);
                             break;
+                        case 'dateIs':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '=', $date);
+                            break;
+
+                        case 'dateIsNot':
+                            $timezone = $request->input('timezone', 'UTC');
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '!=', $date);
+                            break;
+
+                        case 'dateBefore':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '<', $date);
+                            break;
+
+                        case 'dateAfter':
+
+                            $date = Carbon::parse($filter['value'])
+                                ->setTimezone('Asia/Karachi')
+                                ->toDateString();
+
+                            $query->whereDate($filter['field'], '>', $date);
+                            break;
                     }
                 }
             }
@@ -189,12 +226,6 @@ class SupplierController extends ResponseController
 
         try {
             $data = $validated->validated();
-
-            // auto-generate SUP-000001 style number when sku is not given
-            if (empty($data['sku'])) {
-                $nextId = Supplier::max('id') + 1;
-                $data['sku'] = 'SUP-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-            }
 
             $supplier = Supplier::create($data);
 
