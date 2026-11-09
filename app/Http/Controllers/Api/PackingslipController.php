@@ -10,6 +10,7 @@ use App\Models\Packing_slip_detail;
 use App\Models\Purchase_order;
 use App\Models\Sale_order;
 use App\Models\So_detail;
+use App\Models\StoreStock;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -345,6 +346,10 @@ class PackingslipController  extends ResponseController
                     'transaction_date' => now(),
                     'created_by'       => auth()->id(),
                 ]);
+
+                // NEW: keep store_stocks in sync with the ledger row above
+                $signedQty = $isSale ? -$detail->packed_qty : $detail->packed_qty;
+                StoreStock::change($slip->store_id, $detail->item_id, $signedQty);
 
                 /*
              * Update processed quantity.

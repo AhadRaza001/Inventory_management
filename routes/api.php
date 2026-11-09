@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\dashboardController;
 use App\Http\Controllers\Api\GenerateNumberController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\ItemLedgerController;
@@ -26,8 +27,10 @@ Route::get('/user', function (Request $request) {
 Route::post('login', [UserController::class, 'login']);
 Route::post('signup', [UserController::class, 'signup'])->middleware('auth:sanctum');
 Route::post('logout', [UserController::class, 'logout'])->middleware('auth:sanctum');
-// ->middleware('auth:sanctum')
-
+// dashboard
+Route::prefix('dashboard')->name('dashboard.')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [dashboardController::class, 'index'])->name('dashboard');
+});
 Route::prefix('categories')->name('categories.')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/', [CategoryController::class, 'index'])->name('index');
@@ -202,7 +205,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/purchase-order/{id}', 'indexByPurchaseOrder');
 
         Route::get('/{id}', 'single_packing_slip');
-        
+
         Route::post('/{id}/dispatch', 'dispatch');
     });
 });

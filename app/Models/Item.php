@@ -42,4 +42,8 @@ class Item extends Model
     {
         return $this->hasMany(Packing_slip_detail::class, 'item_id');
     }
+    public function stocks()
+    {
+        return $this->hasMany(StoreStock::class);
+    }
 }
