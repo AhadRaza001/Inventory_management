@@ -14,7 +14,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-         $users = [];
+        $users = [];
 
         for ($i = 1; $i <= 10; $i++) {
             $users[] = [
@@ -23,6 +23,7 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
                 'remember_token' => null,
+                'company_id' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -35,11 +36,12 @@ class UserSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => null,
+            'company_id' => 1,
+
             'created_at' => now(),
             'updated_at' => now(),
         ];
 
         DB::table('users')->insert($users);
-    
     }
 }
