@@ -13,20 +13,21 @@ class StoreSeeder extends Seeder
      */
     public function run(): void
     {
-         DB::table('stores')->insert([
+        DB::table('stores')->insert([
             [
+                'company_id' => 1,
                 'name' => 'Main Warehouse',
                 'description' => 'Primary storage warehouse',
                 'address' => 'Gujranwala Industrial Area',
                 'phone' => '03001234567',
             ],
             [
+                'company_id' => 1,
                 'name' => 'City Outlet',
                 'description' => 'Retail store in city',
                 'address' => 'GT Road Gujranwala',
                 'phone' => '03111222333',
             ],
         ]);
-    
     }
 }

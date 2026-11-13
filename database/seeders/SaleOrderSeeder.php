@@ -15,6 +15,7 @@ class SaleOrderSeeder extends Seeder
     {
           DB::table('sale_orders')->insert([
             [
+                'company_id' => 1,
                 'customer_id' => 1,
                 'store_id' => 1,
                 'user_id' => 1,

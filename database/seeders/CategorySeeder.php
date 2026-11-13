@@ -17,22 +17,30 @@ class CategorySeeder extends Seeder
     {
           $categories = [
             [
+                'company_id' => 1,
                 'name' => 'Electronics',
                 'description' => 'Devices, gadgets, and electronic items.',
             ],
             [
+                'company_id' => 1,
+
                 'name' => 'Furniture',
                 'description' => 'Home and office furniture items.',
             ],
             [
+                'company_id' => 1,
+
                 'name' => 'Clothing',
                 'description' => 'Men, women, and kids apparel.',
             ],
             [
+                'company_id' => 1,
+
                 'name' => 'Groceries',
                 'description' => 'Daily food and household consumables.',
             ],
             [
+                'company_id' => 1,
                 'name' => 'Stationery',
                 'description' => 'Office and school supplies.',
             ],

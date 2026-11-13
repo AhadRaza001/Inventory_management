@@ -13,14 +13,134 @@ use Illuminate\Support\Facades\Validator;
 
 class StoreController extends ResponseController
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $stores = Store::paginate(10);
+            $query = Store::query();
 
-            return $this->sendPaginatedResponse($stores, 'Stores fetched successfully.');
+            // columns the table is allowed to sort and filter on
+            $allowedFields = ['id', 'name', 'phone', 'address', 'description', 'created_at'];
+
+            // Global Search
+            if ($request->input('search')) {
+
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('address', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
+            // Sorting
+            $sortField = $request->input('sortField', 'id');
+            $sortOrder = $request->input('sortOrder', 'desc');
+
+            if (!in_array($sortField, $allowedFields)) {
+                $sortField = 'id';
+            }
+
+            if (!in_array($sortOrder, ['asc', 'desc'])) {
+                $sortOrder = 'desc';
+            }
+
+            $query->orderBy($sortField, $sortOrder);
+
+            // Column Filters
+            $filters = json_decode($request->filters, true);
+
+            if ($filters) {
+                foreach ($filters as $filter) {
+
+                    // Skip global filter entries, handled separately via $request->input('search')
+                    if ($filter['field'] === 'global') {
+                        continue;
+                    }
+
+                    // Skip unknown columns
+                    if (!in_array($filter['field'], $allowedFields)) {
+                        continue;
+                    }
+
+                    switch ($filter['operator']) {
+
+                        case 'contains':
+                            $query->where($filter['field'], 'like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'notContains':
+                            $query->where($filter['field'], 'not like', '%' . $filter['value'] . '%');
+                            break;
+
+                        case 'startsWith':
+                            $query->where($filter['field'], 'like', $filter['value'] . '%');
+                            break;
+
+                        case 'endsWith':
+                            $query->where($filter['field'], 'like', '%' . $filter['value']);
+                            break;
+
+                        case 'equals':
+                            $query->where($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'notEquals':
+                            $query->where($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'lt':
+                            $query->where($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'lte':
+                            $query->where($filter['field'], '<=', $filter['value']);
+                            break;
+
+                        case 'gt':
+                            $query->where($filter['field'], '>', $filter['value']);
+                            break;
+
+                        case 'gte':
+                            $query->where($filter['field'], '>=', $filter['value']);
+                            break;
+
+                        // Date filters (created_at)
+                        case 'dateIs':
+                            $query->whereDate($filter['field'], '=', $filter['value']);
+                            break;
+
+                        case 'dateIsNot':
+                            $query->whereDate($filter['field'], '!=', $filter['value']);
+                            break;
+
+                        case 'dateBefore':
+                            $query->whereDate($filter['field'], '<', $filter['value']);
+                            break;
+
+                        case 'dateAfter':
+                            $query->whereDate($filter['field'], '>', $filter['value']);
+                            break;
+                    }
+                }
+            }
+
+            // Pagination
+            $stores = $query->paginate(
+                $request->input('per_page', 10)
+            );
+
+            return $this->sendPaginatedResponse(
+                $stores,
+                'Stores fetched successfully.'
+            );
         } catch (Exception $e) {
-            return $this->sendError('Something went wrong.', $e->getMessage(), 500);
+            return $this->sendError(
+                'Something went wrong.',
+                $e->getMessage(),
+                500
+            );
         }
     }
 

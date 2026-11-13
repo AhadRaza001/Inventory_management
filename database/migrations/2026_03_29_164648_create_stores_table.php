@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unique(['company_id', 'name']);
             $table->text('description')->nullable();
             $table->text('address');
-            $table->string('phone',20)->nullable();
+            $table->string('phone', 20)->nullable();
             $table->timestamps();
         });
     }

@@ -29,7 +29,7 @@ class UserController extends ResponseController
 
         try {
             $data             = $validated->validated();
-              if (Auth::check()) {
+            if (Auth::check()) {
                 $data['company_id'] = Auth::user()->company_id;
             }
             $data['password'] = Hash::make($data['password']);

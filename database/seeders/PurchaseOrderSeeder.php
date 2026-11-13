@@ -15,6 +15,8 @@ class PurchaseOrderSeeder extends Seeder
     {
          DB::table('purchase_orders')->insert([
             [
+                'company_id' => 1,
+
                 'store_id' => 1,
                 'supplier_id' => 1,
                 'user_id' => 1,
