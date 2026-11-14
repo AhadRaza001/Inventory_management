@@ -230,6 +230,7 @@ class ItemController extends ResponseController
                 'sale_price'     => 'required|numeric',
                 'status'         => 'required',
                 'barcode'        => 'required',
+                'reorder_level' => 'required',
                 'category_id'    => 'required|exists:categories,id',
                 'unit_id'        => 'required|exists:units,id',
             ]
@@ -258,10 +259,11 @@ class ItemController extends ResponseController
                 'description'    => 'required|string',
                 'purchase_price' => 'required|numeric',
                 'sale_price'     => 'required|numeric',
+                'reorder_level'  => 'required',
                 'status'         => 'required',
                 'barcode'        => 'required',
                 'unit_id'        => 'required|exists:units,id',
-                'category_id'        => 'required|exists:categories,id',
+                'category_id'    => 'required|exists:categories,id',
             ]
         );
 
