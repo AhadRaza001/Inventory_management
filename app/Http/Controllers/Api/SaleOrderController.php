@@ -159,7 +159,7 @@ class SaleOrderController extends ResponseController
             }
 
             // Pagination
-            $saleOrders = $query->paginate(
+            $saleOrders = $query->orderBy('id', 'asc')->paginate(
                 $request->input('per_page', 10)
             );
 

@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Item_ledger;
 use App\Models\Packing_slip;
 use App\Models\Packing_slip_detail;
+use App\Models\Po_detail;
 use App\Models\Purchase_order;
 use App\Models\Sale_order;
 use App\Models\So_detail;
@@ -104,6 +105,7 @@ class PackingslipController  extends ResponseController
     /* -----------------------------------------------------------------
      |  Store
      | ----------------------------------------------------------------- */
+    public  $unit_price;
     public function store(Request $request)
     {
         $validated = Validator::make($request->all(), [
@@ -136,9 +138,6 @@ class PackingslipController  extends ResponseController
                 ? Sale_order::findOrFail($data['sale_order_id'])
                 : Purchase_order::findOrFail($data['purchase_order_id']);
 
-            $orderNo = $isSale
-                ? $order->so_no
-                : $order->po_no;
 
             if ($order->status !== 'open') {
                 return $this->sendError(
@@ -169,17 +168,14 @@ class PackingslipController  extends ResponseController
             ]);
 
 
-
-
             foreach ($data['details'] as $detail) {
-                // Sale takes stock out, so it must be available. Purchase adds stock.
+                $item = Item::findOrFail($detail['item_id']);
+                $this->unit_price = $isSale ? $item->sale_price : $item->purchase_price;
                 if ($isSale) {
                     $stock = $this->stockBalance($detail['item_id'], $data['store_id']);
 
                     if ($stock < $detail['packed_qty']) {
                         DB::rollBack();
-                        $item = Item::find($detail['item_id']);
-
                         return $this->sendError(
                             'Insufficient stock.',
                             'Not enough stock available for Sku: ' . $item->sku . ' ' . $item->name,
@@ -188,6 +184,7 @@ class PackingslipController  extends ResponseController
                     }
                 }
 
+
                 Packing_slip_detail::create([
                     'packing_slip_id' => $packingSlip->id,
                     'so_detail_id'    => $isSale ? $detail['so_detail_id'] : null,
@@ -195,6 +192,7 @@ class PackingslipController  extends ResponseController
                     'item_id'         => $detail['item_id'],
                     'ordered_qty'     => $detail['ordered_qty'],
                     'packed_qty'      => $detail['packed_qty'],
+                    'unit_price'      => $this->unit_price,
                 ]);
             }
 

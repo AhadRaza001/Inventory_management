@@ -11,6 +11,7 @@ class Packing_slip_detail extends Model
         'so_detail_id',
         'po_detail_id',
         'item_id',
+        'unit_price',
         'ordered_qty',
         'packed_qty',
     ];

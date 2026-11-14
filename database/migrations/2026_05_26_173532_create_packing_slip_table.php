@@ -68,7 +68,7 @@ return new class extends Migration
             $table->foreignId('packing_slip_id')
                 ->constrained()
                 ->onDelete('cascade');
-            
+
 
             // Either SO detail OR PO detail
             $table->foreignId('so_detail_id')
@@ -84,7 +84,7 @@ return new class extends Migration
             $table->foreignId('item_id')
                 ->constrained()
                 ->onDelete('cascade');
-
+            $table->decimal('unit_price', 12, 2)->default(0)->after('packed_qty');
             $table->decimal('ordered_qty', 12, 3);
             $table->decimal('packed_qty', 12, 3);
 
